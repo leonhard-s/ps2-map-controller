@@ -1,4 +1,10 @@
+"""Project-wide type aliases and dummy objects used for type hinting."""
+
 from typing import Any, Generic, Iterator, Optional, Tuple, TypeVar, Union
+
+__all__ = [
+    'Record'
+]
 
 _K = TypeVar('_K', bound=str)
 _T = TypeVar('_T')
