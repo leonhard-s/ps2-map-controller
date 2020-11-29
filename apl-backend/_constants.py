@@ -51,7 +51,7 @@ class Faction(enum.IntEnum):
             raise ValueError(f'Invalid faction ID \'{value}\'') from err
 
 
-class Servers(enum.IntEnum):
+class Server(enum.IntEnum):
     """Enumerator for the game servers (aka. zones) recognised.
 
     Servers with non-matching IDs will be discarded with a warning.
