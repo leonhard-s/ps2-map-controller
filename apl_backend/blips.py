@@ -20,7 +20,12 @@ __all__ = [
 
 
 @dataclasses.dataclass(frozen=True)
-class PlayerBlip:
+class Blip:
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class PlayerBlip(Blip):
     """Player blips allow associating a character with a facility.
 
     These events are sent for facility captures and defences, and are
@@ -42,7 +47,7 @@ class PlayerBlip:
 
 
 @dataclasses.dataclass(frozen=True)
-class RelativePlayerBlip:
+class RelativePlayerBlip(Blip):
     """Relative player blips give relative positioning between players.
 
     This generally happens when players revive or kill each other. For
@@ -67,7 +72,7 @@ class RelativePlayerBlip:
 
 
 @dataclasses.dataclass(frozen=True)
-class OutfitBlip:
+class OutfitBlip(Blip):
     """An outfit blip is used to position outfits with facilities.
 
     One outfit blip is sent for every member's player blip, with extra
@@ -89,7 +94,7 @@ class OutfitBlip:
 
 
 @dataclasses.dataclass(frozen=True)
-class FacilityCapture:
+class FacilityCapture(Blip):
     """A facility has been captured by an outfit.
 
     :param timestamp: UTC timestamp of the event
@@ -114,7 +119,7 @@ class FacilityCapture:
 
 
 @dataclasses.dataclass(frozen=True)
-class FacilityDefence:
+class FacilityDefence(Blip):
     """A facility has been defended by its current owner.
 
     :param timestamp: UTC timestamp of the event
@@ -133,7 +138,7 @@ class FacilityDefence:
 
 
 @dataclasses.dataclass(frozen=True)
-class FacilityReset:
+class FacilityReset(Blip):
     """A facility has been reset to another owner.
 
     This occurs after downtime, or if a continent immediately reopens
