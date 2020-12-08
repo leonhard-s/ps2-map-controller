@@ -13,7 +13,11 @@ import argparse
 import asyncio
 import logging
 
-log = logging.getLogger('listener')
+import auraxium
+
+from ._db import DatabaseHandler
+
+log = logging.getLogger('backend')
 
 # Default database configuration
 DEFAULT_DB_HOST = '127.0.0.1'
@@ -42,8 +46,16 @@ async def main(service_id: str, db_host: str, db_user: str,
     :param db_name: The name of the database to acces.
 
     """
-    # TODO: Implement backend server stack
-    raise NotImplementedError
+    # Setup
+    log.info('Creating Auraxium API client...')
+    client = auraxium.Client(service_id=service_id, profiling=True)
+    log.info('Instantiating database handler...')
+    db_handler = DatabaseHandler(db_host=db_host, db_user=db_user,
+                                 db_pass=db_pass, db_name=db_name)
+    await db_handler.async_init()
+    await db_handler.fetch_blips()
+
+    await client.close()
 
 if __name__ == '__main__':
     # Define command line arguments
@@ -83,8 +95,10 @@ if __name__ == '__main__':
         arx_log.addHandler(fh_)
         arx_log.addHandler(sh_)
     # Run utility
+    loop = asyncio.get_event_loop()
+    loop.create_task(main(**kwargs))
     try:
-        asyncio.run(main(**kwargs))
+        loop.run_forever()
     except InterruptedError:
         log.info('The application has been shut down by an external signal')
     except KeyboardInterrupt:
