@@ -1,4 +1,9 @@
-"""Project-wide type aliases and dummy objects used for type hinting."""
+"""Custom types used for the database module.
+
+This mostly covers type hints for modules that do not provide sensible
+type hints.
+
+"""
 
 from typing import Any, Generic, Iterator, Optional, Tuple, TypeVar, Union
 
