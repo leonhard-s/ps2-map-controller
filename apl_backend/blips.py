@@ -5,9 +5,9 @@ back and merged to simplify the information contained.
 
 """
 
-import dataclasses
 import datetime
-# from typing import Optional
+
+import pydantic
 
 __all__ = [
     'PlayerBlip',
@@ -19,12 +19,24 @@ __all__ = [
 ]
 
 
-@dataclasses.dataclass(frozen=True)
-class Blip:
-    pass
+class Blip(pydantic.BaseModel):  # pylint: disable=no-member
+    """Base class for custom events ("Blips") used in APL.
+
+    Any subclasses will be type-checked to ensure they match the type
+    annotations.
+
+    """
+
+    class Config:
+        """Pydantic model configuration.
+
+        This inner class is used to namespace the pydantic
+        configuration options.
+        """
+        allow_mutation = False
+        anystr_strip_whitespace = True
 
 
-@dataclasses.dataclass(frozen=True)
 class PlayerBlip(Blip):
     """Player blips allow associating a character with a facility.
 
@@ -46,7 +58,6 @@ class PlayerBlip(Blip):
     zone_id: int
 
 
-@dataclasses.dataclass(frozen=True)
 class RelativePlayerBlip(Blip):
     """Relative player blips give relative positioning between players.
 
@@ -71,7 +82,6 @@ class RelativePlayerBlip(Blip):
     zone_id: int
 
 
-@dataclasses.dataclass(frozen=True)
 class OutfitBlip(Blip):
     """An outfit blip is used to position outfits with facilities.
 
@@ -93,7 +103,6 @@ class OutfitBlip(Blip):
     zone_id: int
 
 
-@dataclasses.dataclass(frozen=True)
 class FacilityCapture(Blip):
     """A facility has been captured by an outfit.
 
@@ -118,7 +127,6 @@ class FacilityCapture(Blip):
     zone_id: int
 
 
-@dataclasses.dataclass(frozen=True)
 class FacilityDefence(Blip):
     """A facility has been defended by its current owner.
 
@@ -137,7 +145,6 @@ class FacilityDefence(Blip):
     zone_id: int
 
 
-@dataclasses.dataclass(frozen=True)
 class FacilityReset(Blip):
     """A facility has been reset to another owner.
 
