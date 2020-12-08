@@ -15,6 +15,7 @@ from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List, U
 
 import asyncpg
 import pydantic
+import tlru_cache
 
 from ..blips import Blip, PlayerBlip
 
@@ -116,6 +117,33 @@ class DatabaseHandler:
                     loop.create_task(async_coro)
                 else:
                     loop.call_soon(blip_callback, blips)
+
+    @tlru_cache.tlru_cache(maxsize=100, lifetime=60.0)
+    async def get_base(self, base_id: int) -> Any:
+        """Retrieve a base by ID.
+
+        This method is cached and safe to call repeatedly.
+
+        :param base_id: The base ID to retrieve.
+
+        :raise ValueError: Raised if the given base does not exist.
+
+        """
+        conn: asyncpg.Connection
+        async with self.pool.acquire() as conn:  # type: ignore
+            row: Record[str, Any] = await conn.fetchrow(  # type: ignore
+                """--sql
+                SELECT
+                    *
+                FROM
+                    ps2."Base"
+                WHERE
+                    "id" = ?
+                ;""", base_id)
+        log.debug('Cache miss: fetched base %d (%s) from database',
+                  base_id, row['name'])
+        # TODO: Convert database record to class
+        return row
 
 
 async def _get_player_blips(conn: asyncpg.Connection,
