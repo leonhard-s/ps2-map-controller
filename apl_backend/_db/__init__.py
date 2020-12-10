@@ -10,8 +10,8 @@ No SQL should live outside of this module.
 import asyncio
 import datetime
 import logging
-from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List, Union,
-                    cast)
+from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List,
+                    TypeVar, Union, cast)
 
 import asyncpg
 import pydantic
@@ -25,7 +25,9 @@ __all__ = [
     'DatabaseHandler'
 ]
 
-BlipsCallback = Callable[[Iterable[Blip]], Union[None, Awaitable[None]]]
+_BlipT = TypeVar('_BlipT', bound=Blip)
+_BlipCallback = Callable[[Iterable[_BlipT]], Union[None, Awaitable[None]]]
+_BlipDispatchTable = Dict[_BlipT, List[_BlipCallback[_BlipT]]]
 
 log = logging.getLogger('backend.database')
 
@@ -58,8 +60,7 @@ class DatabaseHandler:
         # the need to handle reconnections ourselves
         self.pool: asyncpg.pool.Pool = asyncpg.create_pool(  # type: ignore
             user=db_user, password=db_pass, database=db_name, host=db_host)
-
-        self.blip_listeners: Dict[Blip, List[BlipsCallback]] = {}
+        self.blip_listeners: _BlipDispatchTable[Any] = {}
 
     async def async_init(self) -> None:
         """Asynchronous initialisation routine.
