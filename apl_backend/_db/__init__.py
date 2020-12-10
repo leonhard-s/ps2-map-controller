@@ -39,14 +39,14 @@ class DatabaseHandler:
     The :meth:`async_init()` method must be called immediately after
     the regular initialiser every time.
 
-    Please note that :attr:`blip_callback` is set to a dummy function
-    by default, you must overwrite this attribute with your own
-    dispatcher.
+    Please note that :attr:`blip_listeners` is initialised as an empty
+    list; the caller must manually register your callbacks for the
+    appropriate blips after instantiation.
 
     :param pool: The connection pool to use for database interactions.
-    :param blip_callback: A function or coroutine to call when new
-        blips are processed.
-    :type blip_callback: BlipsCallback
+    :param blip_listeners: A mapping of blip types and their respective
+        event listener callbacks.
+    :type blip_listeners: Dict[Blip, List[BlipsCallback]]
 
     """
 
@@ -70,6 +70,14 @@ class DatabaseHandler:
 
         """
         await self.pool  # Calls the pool's asynchronous initialiser
+
+    async def close(self) -> None:
+        """Close the database handler and the underlying connection.
+
+        This will wait for any underlying connections to be released
+        before terminating the pool.
+        """
+        await self.pool.close()  # type: ignore
 
     async def fetch_blips(self, min_age: float = 5.0) -> None:
         """Extract and dispatch all recent blips.

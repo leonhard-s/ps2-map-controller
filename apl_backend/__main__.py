@@ -16,6 +16,7 @@ import logging
 import auraxium
 
 from ._db import DatabaseHandler
+from ._server import BackendServer
 
 log = logging.getLogger('backend')
 
@@ -39,23 +40,18 @@ async def main(service_id: str, db_host: str, db_user: str,
     This coroutine acts much like the ``if __name__ == '__main___':``
     clause below, but supports asynchronous methods.
 
-    :param service_id: The Census API service ID to use.
-    :param db_host: The host address of the PostgreSQL server.
-    :param db_user: The database username to log in as.
-    :param db_pass: The database password to use when logging in.
-    :param db_name: The name of the database to acces.
+    Any keyword arguments are forwarded to the :class:`Server` class's
+    initialiser.
 
     """
-    # Setup
-    log.info('Creating Auraxium API client...')
-    client = auraxium.Client(service_id=service_id, profiling=True)
-    log.info('Instantiating database handler...')
-    db_handler = DatabaseHandler(db_host=db_host, db_user=db_user,
-                                 db_pass=db_pass, db_name=db_name)
-    await db_handler.async_init()
-    await db_handler.fetch_blips()
+    log.info('Setting up Auraxium API client...')
+    arx_client = auraxium.Client(service_id=service_id)
+    log.info('Starting database handler...')
+    db_handler = DatabaseHandler(
+        db_host=db_host, db_user=db_user, db_pass=db_pass, db_name=db_name)
+    server = BackendServer(arx_client, db_handler)
+    await server.async_init()
 
-    await client.close()
 
 if __name__ == '__main__':
     # Define command line arguments
