@@ -3,9 +3,13 @@
 import asyncio
 import datetime
 import logging
+from typing import Dict
+
 import auraxium
 
+from .blips import PlayerBlip
 from ._db import DatabaseHandler
+from ._map import MapHandler
 
 log = logging.getLogger('backend')
 
@@ -27,13 +31,16 @@ class BackendServer:
     """
 
     def __init__(self, arx_client: auraxium.Client,
-                 db_handler: DatabaseHandler) -> None:
+                 db_handler: DatabaseHandler,
+                 map_handlers: Dict[int, MapHandler]) -> None:
         self.is_active = True
         self.arx_client = arx_client
-
-        # TODO: Validate that ARX and the API are up and healthy
-
         self.db_handler = db_handler
+        self.map_handlers = map_handlers
+        # Register map handlers to receive blips
+        for handler in map_handlers.values():
+            db_handler.blip_listeners[PlayerBlip] = [
+                handler.dispatch_player_blips]
 
     async def async_init(self) -> None:
         """Asynchronous initialisation routine.
@@ -51,7 +58,6 @@ class BackendServer:
         while self.is_active:
             last_run = datetime.datetime.now()
             await self.db_handler.fetch_blips()
-            # TODO: Do something with blips other than debug prints
 
             next_run = last_run + datetime.timedelta(seconds=5.0)
             delay = (next_run - datetime.datetime.now()).total_seconds()
