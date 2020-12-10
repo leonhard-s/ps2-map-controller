@@ -25,7 +25,13 @@ class Blip(pydantic.BaseModel):  # pylint: disable=no-member
     Any subclasses will be type-checked to ensure they match the type
     annotations.
 
+    :param server_id: ID of the server the event took place on
+    :param zone_id: ID of the continent of the base
+
     """
+
+    server_id: int
+    zone_id: int
 
     class Config:
         """Pydantic model configuration.
@@ -46,16 +52,12 @@ class PlayerBlip(Blip):
     :param timestamp: UTC timestamp of the event
     :param character_id: Character to position
     :param facility_id: Facility to position the character at
-    :param server_id: ID of the server the event took place on
-    :param zone_id: ID of the continent of the base
 
     """
 
     timestamp: datetime.datetime
     character_id: int
     facility_id: int
-    server_id: int
-    zone_id: int
 
 
 class RelativePlayerBlip(Blip):
@@ -70,16 +72,12 @@ class RelativePlayerBlip(Blip):
     :param timestamp: UTC timestamp of the event
     :param character_a_id: Player A of the relation
     :param character_b_id: Player B of the relation
-    :param server_id: ID of the server the event took place on
-    :param zone_id: ID of the continent of the base
 
     """
 
     timestamp: datetime.datetime
     character_a_id: int
     character_b_id: int
-    server_id: int
-    zone_id: int
 
 
 class OutfitBlip(Blip):
@@ -91,16 +89,12 @@ class OutfitBlip(Blip):
     :param timestamp: UTC timestamp of the event
     :param outfit_id: Outfit to be blipped
     :param facility_id: Facility to blip the outfit at
-    :param server_id: ID of the server the event took place on
-    :param zone_id: ID of the continent of the base
 
     """
 
     timestamp: datetime.datetime
     outfit_id: int
     facility_id: int
-    server_id: int
-    zone_id: int
 
 
 class FacilityCapture(Blip):
@@ -123,8 +117,6 @@ class FacilityCapture(Blip):
     new_faction_id: int
     old_faction_id: int
     # outfit_id: Optional[int]
-    server_id: int
-    zone_id: int
 
 
 class FacilityDefence(Blip):
@@ -141,8 +133,6 @@ class FacilityDefence(Blip):
     timestamp: datetime.datetime
     facility_id: int
     faction_id: int
-    server_id: int
-    zone_id: int
 
 
 class FacilityReset(Blip):
@@ -162,5 +152,3 @@ class FacilityReset(Blip):
     timestamp: datetime.datetime
     facility_id: int
     faction_id: int
-    server_id: int
-    zone_id: int
