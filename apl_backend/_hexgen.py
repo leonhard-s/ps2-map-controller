@@ -24,6 +24,8 @@ accessed from the web app as needed.
 import math
 from typing import Iterable, Iterator, List, NamedTuple, Set, Tuple
 
+import auraxium
+
 
 # pylint: disable=invalid-name
 class _Point(NamedTuple):
@@ -56,6 +58,14 @@ class _Tile(NamedTuple):
 
     u: int
     v: int
+
+
+async def get_base_outline(client: auraxium.Client, base_id: int,
+                           radius: float) -> List[Tuple[_Point, _Point]]:
+    hexes = await client.find(
+        auraxium.ps2.MapHex, results=1000, map_region_id=base_id)
+    return _get_hexes_outline(
+        [_Tile(h.data.x, h.data.y) for h in hexes], radius)
 
 
 def _get_hex_corner(origin: _Point, radius: float, corner_idx: int) -> _Point:
