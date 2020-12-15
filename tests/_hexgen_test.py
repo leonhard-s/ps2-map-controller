@@ -31,7 +31,7 @@ class HexGenTest(unittest.TestCase):
         origin = Point(0, 0)
         radius = 10
         tuple_a = get_hex_corner(origin, radius, 0)
-        tuple_b = Point(5*math.sqrt(3), -5)
+        tuple_b = Point(5*math.sqrt(3), 5)
         self._good_enuf(tuple_a, tuple_b)
 
     def test_radius_to_size(self) -> None:
