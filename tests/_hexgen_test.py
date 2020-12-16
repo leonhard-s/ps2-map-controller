@@ -8,6 +8,7 @@ from apl_backend._hexgen import (  # pylint: disable=import-error
     _Point as Point,
     _Tile as Tile,
     _get_hex_corner as get_hex_corner,
+    _get_hex_edge as get_hex_edge,
     _radius_to_size as radius_to_size,
     _tile_to_point as tile_to_point
 )
@@ -38,6 +39,21 @@ class HexGenTest(unittest.TestCase):
         tuple_a = get_hex_corner(origin, radius, 3)
         tuple_b = Point(-5 * math.sqrt(3) + 5, -5 - 5)
         self._good_enuf(tuple_a, tuple_b)
+
+    def test_edges(self) -> None:
+        """Test the hexagon edge generator."""
+        origin = Point(0, 0)
+        radius = 10
+        tuple_a = get_hex_edge(origin, radius, 0)
+        tuple_b = Point(5 * math.sqrt(3), -5), Point(5 * math.sqrt(3), 5)
+        self._good_enuf(tuple_a[0], tuple_b[0])
+        self._good_enuf(tuple_a[1], tuple_b[1])
+        for start, end in zip(range(-1, 5), range(6)):
+            if start == -1:
+                start = 5
+            edge = (get_hex_corner(origin, radius, start),
+                    get_hex_corner(origin, radius, end))
+            self._good_enuf(edge, get_hex_edge(origin, radius, end))
 
     def test_radius_to_size(self) -> None:
         """Test conversion to Cartesian sizes from hex radii."""
