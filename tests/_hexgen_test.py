@@ -29,9 +29,14 @@ class HexGenTest(unittest.TestCase):
     def test_corners(self) -> None:
         """Test the hexagon corner position conversion."""
         origin = Point(0, 0)
-        radius = 10
+        radius = 5
         tuple_a = get_hex_corner(origin, radius, 0)
-        tuple_b = Point(5*math.sqrt(3), 5)
+        tuple_b = Point(2.5*math.sqrt(3), 2.5)
+        self._good_enuf(tuple_a, tuple_b)
+        origin = Point(5, -5)
+        radius = 10
+        tuple_a = get_hex_corner(origin, radius, 3)
+        tuple_b = Point(-5 * math.sqrt(3) + 5, -5 - 5)
         self._good_enuf(tuple_a, tuple_b)
 
     def test_radius_to_size(self) -> None:
