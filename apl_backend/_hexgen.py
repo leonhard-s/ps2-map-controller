@@ -149,8 +149,9 @@ def _get_hex_neighbours(hex_: _Tile) -> Iterator[_Tile]:
     yield _Tile(hex_.u+1, hex_.v-1)  # Bottom Right
 
 
-def _get_hexes_outline(hexes: Iterable[_Tile],
-                       radius: float) -> List[Tuple[_Point, _Point]]:
+def _get_hexes_outline(hexes: Iterable[_Tile], radius: float,
+                       precision: float = 1e-12
+                       ) -> List[Tuple[_Point, _Point]]:
     """Return the exterior edges of the given list of tiles.
 
     This loops over every hex in the group and checks its neighbours
@@ -161,6 +162,8 @@ def _get_hexes_outline(hexes: Iterable[_Tile],
     Args:
         hexes (Iterable[_Tile]): The list of hexes to outline
         radius (float): The radius of the hexagons
+        precision (float, optional): Rounding precision for output
+            points. Defaults to 1e-12.
 
     Returns:
         List[Tuple[_Point, _Point]]: An unsorted list of exterior edges
@@ -170,9 +173,12 @@ def _get_hexes_outline(hexes: Iterable[_Tile],
     members: Set[_Tile] = set(hexes)
     # Create a list of all edges between member hexagons and those neighbours
     # that are not part of the group
-    return [_get_hex_edge(_tile_to_point(h, radius), radius, i)
-            for h in members for i, n in enumerate(_get_hex_neighbours(h))
-            if n not in members]
+    edges = [_get_hex_edge(_tile_to_point(h, radius), radius, i)
+             for h in members for i, n in enumerate(_get_hex_neighbours(h))
+             if n not in members]
+    digits = max(-int(math.log10(precision)), 0)
+    return [tuple(_Point(round(p.x, digits), round(p.y, digits)) for p in e)
+            for e in edges]
 
 
 def _radius_to_size(radius: float) -> Tuple[float, float]:
