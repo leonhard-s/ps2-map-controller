@@ -22,7 +22,7 @@ accessed from the web app as needed.
 # Mad props to the author, the entire page is a masterpiece! <3
 
 import math
-from typing import Iterable, Iterator, List, NamedTuple, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, NamedTuple, Set, Tuple
 
 import auraxium
 
@@ -60,12 +60,97 @@ class _Tile(NamedTuple):
     v: int
 
 
-async def get_base_outline(client: auraxium.Client, base_id: int,
-                           radius: float) -> List[Tuple[_Point, _Point]]:
-    hexes = await client.find(
-        auraxium.ps2.MapHex, results=1000, map_region_id=base_id)
-    return _get_hexes_outline(
-        [_Tile(h.data.x, h.data.y) for h in hexes], radius)
+async def get_base_outlines(client: auraxium.Client, continent_id: int,
+                            radius: float) -> Dict[int, List[_Point]]:
+    """Retrieve all base outlines for the given continent.
+
+    This returns a mapping of base IDs to closed polygons representing
+    that base's outline.
+
+    Args:
+        client (auraxium.Client): ARX client to use for requests
+        continent_id (int): The continent/zone ID to access
+        radius (float): Arbitrary scaling factor for hexes
+
+    Returns:
+        Dict[int, List[_Point]]: A mapping of base IDs to a polygon
+            representing its outline.
+
+    """
+    # Get all hexes on this continent
+    map_hexes = await client.find(
+        auraxium.ps2.MapHex, results=10_000, zone_id=continent_id)
+    # Group the hexes by their base ID
+    base_tiles: Dict[int, List[_Tile]] = {}
+    for hex_ in map_hexes:
+        base_id = hex_.data.map_region_id
+        try:
+            base_tiles[base_id].append(_Tile(hex_.data.x, hex_.data.y))
+        except KeyError:
+            base_tiles[base_id] = [_Tile(hex_.data.x, hex_.data.y)]
+    # Create the outlines for each base
+    base_outlines: Dict[int, List[_Point]] = {}
+    for base_id, hexes in base_tiles.items():
+        # Get the map hex outlines for this base
+        outlines = _get_hexes_outline(hexes, radius)
+        # Connect the individual outlines into a single polygon
+        base_outlines[base_id] = _connect_outlines(outlines)
+    return base_outlines
+
+
+def _connect_outlines(outlines: List[Tuple[_Point, _Point]]) -> List[_Point]:
+    """Connect a set of outlines into a closed polygon.
+
+    This mangles the input outlines list; be sure to pass a copy if you
+    still need to use the original elsewhere.
+
+    Args:
+        outlines (List[Tuple[_Point, _Point]]): The outlines to connect
+
+    Raises:
+        ValueError: Raised if the outlines are disjoint or not closed
+
+    Returns:
+        List[_Point]: Closed outlines
+
+    """
+    # Remove outline ordering; these sets will only ever hold two items
+    lines: List[Set[_Point]] = [set(t) for t in outlines]
+    # Output polygon
+    polygon: List[_Point] = []
+    # Populate with first segment
+    polygon.extend(lines.pop())
+    # Container for currently active points (i.e. loose ends in the poly line)
+    active = set(polygon)
+    # Process all input lines
+    while lines:
+        # Find a segment that shares a point with the current endpoints
+        for line in lines:
+            if line.intersection(active):
+                lines.remove(line)
+                # If the current line and endpoints are identical, do nothing.
+                # This just closes up the polygon and empties the input list.
+                if not (diff := line.difference(active)):
+                    break
+                # Two lines should never have more than one shared point
+                assert len(diff) == 1
+                new_element = diff.pop()
+                # "Symmetric difference update" is basically an XOR
+                active.symmetric_difference_update(line)
+                # Add the new point to the right end of the polygon
+                if line.intersection({polygon[0]}):
+                    polygon.insert(0, new_element)
+                else:
+                    polygon.append(new_element)
+                # Break the for loop since we changed the number of elements in
+                # the list; the iterator is not a fan of sizes changing.
+                break
+        else:
+            # This is executed if no intersection was found between the active
+            # endpoints and the input lines.
+            raise RuntimeError(
+                'Unable to close hex outline, input might be disjoint?')
+    return polygon
 
 
 def _get_hex_corner(origin: _Point, radius: float, corner_idx: int) -> _Point:
