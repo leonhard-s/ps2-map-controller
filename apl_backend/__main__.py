@@ -97,7 +97,7 @@ if __name__ == '__main__':
              'the logging input from Auraxium will also be included')
     # Parse arguments from sys.argv
     kwargs = vars(parser.parse_args())
-    # Optioanlly set up logging
+    # Optionally set up logging
     if kwargs['log_level'] != 'DISABLE':
         log_level = getattr(logging, kwargs.pop('log_level'))
         log.setLevel(log_level)
