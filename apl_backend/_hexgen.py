@@ -25,6 +25,8 @@ import math
 from typing import Dict, Iterable, Iterator, List, NamedTuple, Set, Tuple
 
 import auraxium
+import svgwrite
+from svgwrite.shapes import Polygon
 
 
 # pylint: disable=invalid-name
@@ -96,6 +98,38 @@ async def get_base_outlines(client: auraxium.Client, continent_id: int,
         # Connect the individual outlines into a single polygon
         base_outlines[base_id] = _connect_outlines(outlines)
     return base_outlines
+
+
+async def get_base_svgs(client: auraxium.Client, continent_id: int,
+                        radius: float) -> Dict[int, str]:
+    """Creating a mapping of base IDs to serialised outline SVGs.
+
+    This is the primary method exported by this module and allows
+    generation of hex outlines for a given continent.
+
+    These outlines are provided via serialised SVG elements containing
+    a single closed polygon each.
+
+    Args:
+        client (auraxium.Client): The API client to use for the request
+        continent_id (int): The ID of the continent to access
+        radius (float): Outer radius of a single hexagon in pixels
+
+    Returns:
+        Dict[int, str]: A mapping of base IDs to its outline as a
+            serialised SVG element
+
+    """
+    # Get the base outlines as closed polygons
+    outlines = await get_base_outlines(client, continent_id, radius)
+    # Create SVG elements for each
+    drawings = {}
+    for base_id, outline in outlines.items():
+        drawing = svgwrite.Drawing(debug=True)
+        drawing.add(Polygon([(p.x, p.y) for p in outline]))  # type: ignore
+        drawings[base_id] = drawing
+    # Serialise SVGs
+    return {k: v.tostring() for k, v in drawings.items()}
 
 
 def _connect_outlines(outlines: List[Tuple[_Point, _Point]]) -> List[_Point]:

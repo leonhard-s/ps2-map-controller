@@ -2,4 +2,5 @@ auraxium
 asyncpg >= 0.21
 fastapi >= 0.61.2
 pydantic >= 1.6.1
+svgwrite >= 1.4
 tlru_cache
