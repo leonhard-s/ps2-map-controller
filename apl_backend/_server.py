@@ -24,7 +24,6 @@ class BackendServer:
     of this class; the other modules are not mean to import each other.
 
     Attributes:
-        is_active: Flag for when the server is running.
         arx_client: PS2 API client for synchronisation.
         db_handler: Database pool handler.
 
@@ -33,7 +32,7 @@ class BackendServer:
     def __init__(self, arx_client: auraxium.Client,
                  db_handler: DatabaseHandler,
                  map_handlers: Dict[int, MapHandler]) -> None:
-        self.is_active = True
+        self._is_active = True
         self.arx_client = arx_client
         self.db_handler = db_handler
         self.map_handlers = map_handlers
@@ -41,6 +40,11 @@ class BackendServer:
         for handler in map_handlers.values():
             db_handler.blip_listeners[PlayerBlip] = [
                 handler.dispatch_player_blips]
+
+    @property
+    def is_active(self) -> bool:
+        """Read-only flag for whenthe server is running."""
+        return self._is_active
 
     async def async_init(self) -> None:
         """Asynchronous initialisation routine.
@@ -55,7 +59,7 @@ class BackendServer:
         loop.create_task(self._database_scraper())
 
     async def _database_scraper(self) -> None:
-        while self.is_active:
+        while self._is_active:
             last_run = datetime.datetime.now()
             await self.db_handler.fetch_blips()
 
@@ -65,8 +69,9 @@ class BackendServer:
 
     async def close(self) -> None:
         """Close the backend server gracefully."""
-        self.is_active = False
+        self._is_active = False
         await self.arx_client.close()
         # NOTE: The connection pool used may still process requests; any other
-        # components must be shut down first.
+        # components must be shut down so the connections can be closed neatly
+        # before the DB is disconnected.
         await self.db_handler.close()
