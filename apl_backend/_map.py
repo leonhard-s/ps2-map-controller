@@ -4,7 +4,7 @@
 import logging
 from typing import Dict, Iterable, List, TypeVar
 
-from .blips import Blip, PlayerBlip
+from .blips import Blip, PlayerBlip, FacilityCapture, RelativePlayerBlip
 
 log = logging.getLogger('backend.map')
 
@@ -16,9 +16,53 @@ class ContinentInstance:
 
     def __init__(self, continent_id: int) -> None:
         self.continent_id = continent_id
+        self._base_owners: Dict[int, int] = {}
 
-    def process_player_blips(self, blips: List[PlayerBlip]) -> None:
-        log.debug('Discarded %d player blips (NYI)', len(blips))
+    def clear(self) -> None:
+        """Reset the continent handler.
+
+        This clears all internal dictionaries, resetting the handler to
+        the state it was in when it first started.
+        """
+        self._base_owners.clear()
+
+    def process_ownership_blips(self, blips: Iterable[FacilityCapture]) -> None:
+        """Event handler for :class:`FacilityCapture` blips.
+
+        Args:
+            blips (Iterable[FacilityCapture]): The blips to process
+        """
+        base_owners = self._base_owners
+        for blip in blips:
+            new_owner = blip.new_faction_id
+            old_owner = base_owners[blip.old_faction_id]
+            if old_owner == new_owner:
+                log.warning('Received redundant ownership update for base ID '
+                            '%d (was already %d before)',
+                            blip.base_id, old_owner)
+            else:
+                log.debug('Updated ownership for base ID %d (was %d, now %d)',
+                          blip.base_id, old_owner, new_owner)
+                base_owners[blip.base_id] = new_owner
+
+    def process_player_blips(self, blips: Iterable[PlayerBlip]) -> None:
+        """Event handler for :class:`PlayerBlip` blips.
+
+        Args:
+            blips (Iterable[PlayerBlip]): The blips to process
+
+        """
+        log.info('Discarded %d absolute player blips', len(list(blips)))
+
+    def process_relative_player_blips(
+            self, blips: Iterable[RelativePlayerBlip]) -> None:
+        """Event handler for :class:`RelativePlayerBlip` blips.
+
+        Args:
+            blips (Iterable[RelativePlayerBlip]): The blips to process
+
+        """
+        log.info('Discarded %d relative player blips', len(list(blips)))
 
 
 class MapHandler:
@@ -48,6 +92,16 @@ class MapHandler:
         grouped = self._group_blips(blips)
         for continent_id, continent_blips in grouped.items():
             self.continents[continent_id].process_player_blips(continent_blips)
+
+    def clear(self) -> None:
+        """Reset the map handler, destroying all map representations.
+
+        This is mostly used to reset the state of the map handler
+        for development or troubleshooting.
+
+        """
+        for continent in self.continents.values():
+            continent.clear()
 
     def _group_blips(self, blips: Iterable[_BlipT]) -> Dict[int, List[_BlipT]]:
         """Group the given blips by their continent ID.
