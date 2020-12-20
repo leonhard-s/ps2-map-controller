@@ -94,7 +94,7 @@ async def get_base_outlines(client: auraxium.Client, continent_id: int,
     base_outlines: Dict[int, List[_Point]] = {}
     for base_id, hexes in base_tiles.items():
         # Get the map hex outlines for this base
-        outlines = _get_hexes_outline(hexes, radius)
+        outlines = _get_hexes_outline(hexes, radius, 1e-2)
         # Connect the individual outlines into a single polygon
         base_outlines[base_id] = _connect_outlines(outlines)
     return base_outlines
