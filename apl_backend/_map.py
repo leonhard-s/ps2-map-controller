@@ -4,7 +4,7 @@
 import logging
 from typing import Dict, Iterable, List, TypeVar
 
-from .blips import Blip, PlayerBlip, FacilityCapture, RelativePlayerBlip
+from .blips import Blip, PlayerBlip, BaseControl, RelativePlayerBlip
 
 log = logging.getLogger('backend.map')
 
@@ -26,11 +26,12 @@ class ContinentInstance:
         """
         self._base_owners.clear()
 
-    def process_ownership_blips(self, blips: Iterable[FacilityCapture]) -> None:
-        """Event handler for :class:`FacilityCapture` blips.
+    def process_ownership_blips(self, blips: Iterable[BaseControl]) -> None:
+        """Event handler for :class:`BaseControl` blips.
 
         Args:
-            blips (Iterable[FacilityCapture]): The blips to process
+            blips (Iterable[BaseControl]): The blips to process
+
         """
         base_owners = self._base_owners
         for blip in blips:
@@ -125,5 +126,5 @@ class MapHandler:
         filtered = filter(is_valid, blips)
         grouped: Dict[int, List[_BlipT]] = {i: [] for i in self.continents}
         for blip in filtered:
-            grouped[blip.zone_id].append(blip)
+            grouped[blip.continent_id].append(blip)
         return grouped
