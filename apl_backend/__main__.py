@@ -21,23 +21,6 @@ from ._server import BackendServer
 
 log = logging.getLogger('backend')
 
-# TODO: The following contants should be read from the database
-
-CONTINENTS = [
-    2,  # Indar
-    4,  # Hossin
-    6,  # Amerish
-    8  # Esamir
-]
-SERVERS = [
-    1,  # Connery
-    10,  # Miller
-    13,  # Cobalt
-    17,  # Emerald
-    25,  # Briggs
-    40  # SolTech
-]
-
 # Default database configuration
 DEFAULT_DB_HOST = '127.0.0.1'
 DEFAULT_DB_NAME = 'apl'
@@ -67,9 +50,14 @@ async def main(service_id: str, db_host: str, db_user: str,
     log.info('Starting database handler...')
     db_handler = DatabaseHandler(
         db_host=db_host, db_user=db_user, db_pass=db_pass, db_name=db_name)
-    map_handlers = {i: MapHandler(i, CONTINENTS) for i in SERVERS}
-    server = BackendServer(arx_client, db_handler, map_handlers)
+    log.info('Initialising backend server...')
+    server = BackendServer(arx_client, db_handler, {})
     await server.async_init()
+    log.info('Retrieving static tables...')
+    servers = [s[0] for s in await db_handler.get_servers()]
+    continents = [i[0] for i in await db_handler.get_continents()]
+    log.info('Spawning map handlers (monitoring %d servers)', len(servers))
+    server.map_handlers = {i: MapHandler(i, continents) for i in servers}
 
 
 if __name__ == '__main__':
