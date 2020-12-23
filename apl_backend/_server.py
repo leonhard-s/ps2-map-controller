@@ -43,7 +43,7 @@ class BackendServer:
 
     @property
     def is_active(self) -> bool:
-        """Read-only flag for whenthe server is running."""
+        """Read-only flag for when the server is running."""
         return self._is_active
 
     async def async_init(self) -> None:
