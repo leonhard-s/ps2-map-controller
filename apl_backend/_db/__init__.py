@@ -220,7 +220,7 @@ async def _get_player_blips(conn: asyncpg.Connection,
     rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
         # """--sql
         # DELETE FROM
-        #     blips."PlayerBlip"
+        #     "event"."PlayerBlip"
         # WHERE
         #     "timestamp" < $1
         # RETURNING
@@ -230,7 +230,7 @@ async def _get_player_blips(conn: asyncpg.Connection,
                 SELECT
                     *
                 FROM
-                    blips."PlayerBlip"
+                    "event"."PlayerBlip"
                 WHERE
                     "timestamp" < $1
                 ;""", cutoff)
