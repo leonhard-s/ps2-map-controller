@@ -159,6 +159,60 @@ class DatabaseHandler:
                   base_id, row_tuple[1])
         return row_tuple
 
+    @tlru_cache.tlru_cache(maxsize=10, lifetime=3600.0)
+    async def get_continents(self) -> List[Tuple[int, str]]:
+        """Retrieve the list of servers.
+
+        This method is cached and safe to call repeatedly.
+
+        :param active_only: If True, only tracked servers are returned,
+            by default True.
+
+        """
+        conn: asyncpg.Connection
+        async with self.pool.acquire() as conn:  # type: ignore
+            rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
+                """--sql
+                SELECT
+                    ("id", "name")
+                FROM
+                    "autopl"."Continent"
+                ;""")
+        return [tuple(r)[0] for r in rows]
+
+    @tlru_cache.tlru_cache(maxsize=20, lifetime=3600.0)
+    async def get_servers(self, active_only: bool = True
+                          ) -> List[Tuple[int, str, str]]:
+        """Retrieve the list of servers.
+
+        This method is cached and safe to call repeatedly.
+
+        :param active_only: If True, only tracked servers are returned,
+            by default True.
+
+        """
+        conn: asyncpg.Connection
+        rows: List[Record[str, Any]]
+        async with self.pool.acquire() as conn:  # type: ignore
+            if active_only:
+                rows = await conn.fetch(  # type: ignore
+                    """--sql
+                    SELECT
+                        ("id", "name", "region")
+                    FROM
+                        "autopl"."Server"
+                    WHERE
+                        "tracking_enabled" = TRUE
+                    ;""")
+            else:
+                rows = await conn.fetch(  # type: ignore
+                    """--sql
+                    SELECT
+                        ("id", "name", "region")
+                    FROM
+                        "autopl"."Server"
+                    ;""")
+        return [tuple(r)[0] for r in rows]
 
 
 async def _get_player_blips(conn: asyncpg.Connection,
