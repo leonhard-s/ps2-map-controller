@@ -17,7 +17,7 @@ import asyncpg
 import pydantic
 import tlru_cache
 
-from ..blips import Blip, PlayerBlip
+from ..blips import BaseControl, Blip, PlayerBlip
 
 from ._types import Record
 
@@ -107,6 +107,7 @@ class DatabaseHandler:
         conn: asyncpg.Connection
         async with self.pool.acquire() as conn:  # type: ignore
 
+            blips[BaseControl] = await _get_base_control_blips(conn, cutoff)
             blips[PlayerBlip] = await _get_player_blips(conn, cutoff)
 
         # Dispatch blips
@@ -213,6 +214,36 @@ class DatabaseHandler:
                         "autopl"."Server"
                     ;""")
         return [tuple(r)[0] for r in rows]
+
+
+async def _get_base_control_blips(conn: asyncpg.Connection,
+                                  cutoff: datetime.datetime
+                                  ) -> List[BaseControl]:
+    rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
+        """--sql
+        DELETE FROM
+            "event"."BaseControl"
+        WHERE
+            "timestamp" < $1
+        RETURNING
+            ("timestamp", "server_id", "continent_id", "base_id",
+             "old_faction_id", "new_faction_id")
+        ;""", cutoff)
+    if not rows:
+        return []
+    log.debug('Fetched %d BaseControl blips from database', len(rows))
+
+    blips: List[BaseControl] = []
+    failed: List[Record[str, Any]] = []
+    for row in rows:
+        try:
+            blips.append(BaseControl.from_row(row))
+        except pydantic.ValidationError:
+            failed.append(row)
+    if failed:
+        log.warning('Skipped %d invalid rows; first: %s',
+                    len(failed), failed[0])
+    return blips
 
 
 async def _get_player_blips(conn: asyncpg.Connection,

@@ -7,7 +7,7 @@ from typing import Dict
 
 import auraxium
 
-from .blips import PlayerBlip
+from .blips import BaseControl, PlayerBlip
 from ._db import DatabaseHandler
 from ._map import MapHandler
 
@@ -26,6 +26,7 @@ class BackendServer:
     Attributes:
         arx_client: PS2 API client for synchronisation.
         db_handler: Database pool handler.
+        map_handlers: Individual map handlers for each server
 
     """
 
@@ -37,9 +38,19 @@ class BackendServer:
         self.db_handler = db_handler
         self.map_handlers = map_handlers
         # Register map handlers to receive blips
+        try:
+            listeners = db_handler.blip_listeners[BaseControl]
+        except KeyError:
+            listeners = []
         for handler in map_handlers.values():
-            db_handler.blip_listeners[PlayerBlip] = [
-                handler.dispatch_player_blips]
+            listeners.append(handler.dispatch_base_control)
+
+        try:
+            listeners = db_handler.blip_listeners[PlayerBlip]
+        except KeyError:
+            listeners = []
+        for handler in map_handlers.values():
+            listeners.append(handler.dispatch_player_blips)
 
     @property
     def is_active(self) -> bool:

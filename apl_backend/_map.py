@@ -26,7 +26,7 @@ class ContinentInstance:
         """
         self._base_owners.clear()
 
-    def process_ownership_blips(self, blips: Iterable[BaseControl]) -> None:
+    def process_base_control_blips(self, blips: Iterable[BaseControl]) -> None:
         """Event handler for :class:`BaseControl` blips.
 
         Args:
@@ -79,6 +79,15 @@ class MapHandler:
         self.continents: Dict[int, ContinentInstance] = {
             i: ContinentInstance(i) for i in continents}
         self.server_id = server_id
+
+    def dispatch_base_control(self, blips: Iterable[BaseControl]) -> None:
+        grouped = self._group_blips(blips)
+        for continent_id, continent_blips in grouped.items():
+            self.continents[continent_id].process_base_control_blips(
+                continent_blips)
+            log.info('Map handler for server %d processed %d blips for '
+                     'continent %d',
+                     self.server_id, len(continent_blips), continent_id)
 
     def dispatch_player_blips(self, blips: Iterable[PlayerBlip]) -> None:
         """Dispatch a series of player blips to the continent handler.

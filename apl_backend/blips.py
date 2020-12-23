@@ -115,11 +115,11 @@ class BaseControl(Blip):
     This includes continent (un-)locks and partially locked states.
 
     :param base_id: ID of the facility that changed ownership
-    :param new_faction_id: Faction that gained control over the base
     :param old_faction_id: Faction that used to be in control
+    :param new_faction_id: Faction that gained control over the base
 
     """
 
     base_id: int
-    new_faction_id: int
     old_faction_id: int
+    new_faction_id: int
