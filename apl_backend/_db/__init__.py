@@ -224,17 +224,17 @@ async def _get_player_blips(conn: asyncpg.Connection,
         WHERE
             "timestamp" < $1
         RETURNING
-            *
+            ("timestamp", "server_id", "continent_id", "player_id", "base_id")
         ;""", cutoff)
     if not rows:
         return []
-    log.debug('Fetched %d blips from database', len(rows))
+    log.debug('Fetched %d PlayerBlip from database', len(rows))
 
     blips: List[PlayerBlip] = []
     failed: List[Record[str, Any]] = []
     for row in rows:
         try:
-            blips.append(PlayerBlip(**row))
+            blips.append(PlayerBlip.from_row(row))
         except pydantic.ValidationError:
             failed.append(row)
     if failed:

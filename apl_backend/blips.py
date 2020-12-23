@@ -6,6 +6,7 @@ back and merged to simplify the information contained.
 """
 
 import datetime
+from typing import Any, Dict, List, Type, TypeVar
 
 import pydantic
 
@@ -15,6 +16,8 @@ __all__ = [
     'RelativePlayerBlip',
     'OutfitBlip'
 ]
+
+_BlipT = TypeVar('_BlipT', bound='Blip')
 
 
 class Blip(pydantic.BaseModel):  # pylint: disable=no-member
@@ -41,6 +44,21 @@ class Blip(pydantic.BaseModel):  # pylint: disable=no-member
         """
         allow_mutation = False
         anystr_strip_whitespace = True
+
+    @classmethod
+    def from_row(cls: Type[_BlipT], row: Any) -> _BlipT:
+        """Create a blip data class from a database row.
+
+        Pydantic models do not support instantiation from an interable
+        like other named tuples.
+
+        Note that this method only supports dataclasses without
+        optional arguments whose number of attributes exactly matches
+        the length of the row.
+        """
+        fields: Dict[str, Any] = cls.__fields__  # type: ignore
+        data: List[Any] = list(row['row'])
+        return cls(**{k: data[i] for i, k in enumerate(fields.keys())})
 
 
 class PlayerBlip(Blip):
