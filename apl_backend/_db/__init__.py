@@ -10,8 +10,8 @@ No SQL should live outside of this module.
 import asyncio
 import datetime
 import logging
-from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List,
-                    Optional, Tuple, TypeVar, Union, cast)
+from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List, Optional, Tuple,
+                    TypeVar, Union, cast)
 
 import asyncpg
 import pydantic
@@ -218,22 +218,16 @@ class DatabaseHandler:
 async def _get_player_blips(conn: asyncpg.Connection,
                             cutoff: datetime.datetime) -> List[PlayerBlip]:
     rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
-        # """--sql
-        # DELETE FROM
-        #     "event"."PlayerBlip"
-        # WHERE
-        #     "timestamp" < $1
-        # RETURNING
-        #     *
-        # ;""", cutoff)
         """--sql
-                SELECT
-                    *
-                FROM
-                    "event"."PlayerBlip"
-                WHERE
-                    "timestamp" < $1
-                ;""", cutoff)
+        DELETE FROM
+            "event"."PlayerBlip"
+        WHERE
+            "timestamp" < $1
+        RETURNING
+            *
+        ;""", cutoff)
+    if not rows:
+        return []
     log.debug('Fetched %d blips from database', len(rows))
 
     blips: List[PlayerBlip] = []
