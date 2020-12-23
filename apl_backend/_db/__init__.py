@@ -11,7 +11,7 @@ import asyncio
 import datetime
 import logging
 from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List,
-                    TypeVar, Union, cast)
+                    Optional, Tuple, TypeVar, Union, cast)
 
 import asyncpg
 import pydantic
@@ -128,7 +128,8 @@ class DatabaseHandler:
                     loop.call_soon(blip_callback, blips)
 
     @tlru_cache.tlru_cache(maxsize=100, lifetime=60.0)
-    async def get_base(self, base_id: int) -> Any:
+    async def get_base(self, base_id: int
+                       ) -> Tuple[int, str, int, str, float, float]:
         """Retrieve a base by ID.
 
         This method is cached and safe to call repeatedly.
@@ -139,20 +140,25 @@ class DatabaseHandler:
 
         """
         conn: asyncpg.Connection
+        row: Optional[Record[str, Any]]
         async with self.pool.acquire() as conn:  # type: ignore
-            row: Record[str, Any] = await conn.fetchrow(  # type: ignore
+            row = await conn.fetchrow(  # type: ignore
                 """--sql
                 SELECT
-                    *
+                    ("id", "name", "continent_id", "type"::text,
+                     "map_pos_x", "map_pos_y")
                 FROM
-                    ps2."Base"
+                    "autopl"."Base"
                 WHERE
-                    "id" = ?
+                    "id" = $1
                 ;""", base_id)
+        if row is None:
+            raise ValueError(f'Base ID not found: {base_id}')
+        row_tuple: Tuple[int, str, int, str, float, float] = tuple(row)[0]
         log.debug('Cache miss: fetched base %d (%s) from database',
-                  base_id, row['name'])
-        # TODO: Convert database record to class
-        return row
+                  base_id, row_tuple[1])
+        return row_tuple
+
 
 
 async def _get_player_blips(conn: asyncpg.Connection,
