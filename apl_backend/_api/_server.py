@@ -19,6 +19,8 @@ import threading
 
 import uvicorn
 
+from ._types import Server
+
 log = logging.getLogger('api.host')
 
 
@@ -27,7 +29,7 @@ class ApiHost:
     def __init__(self) -> None:
         config = uvicorn.Config('apl_backend._api._app:app', host='127.0.0.1',
                                 port=5000, log_level='info', loop='asyncio')
-        self._server = uvicorn.Server(config=config)
+        self._server: Server = uvicorn.Server(config=config)  # type: ignore
         self._thread = threading.Thread(target=self._server.run)
         # Daemon threads are stopped once all non-Daemon threads have exited.
         self._thread.setDaemon(True)
