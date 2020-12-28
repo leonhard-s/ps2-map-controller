@@ -15,7 +15,6 @@ import logging
 
 import auraxium
 
-from ._api import ApiHost
 from ._db import DatabaseHandler
 from ._map import MapHandler
 from ._server import BackendServer
