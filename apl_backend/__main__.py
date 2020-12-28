@@ -1,12 +1,11 @@
 """Main script for launching the APL backend component.
 
 This script sets up logging, checks for database availability and
-creates the stack. This includes the database scraper, the map state
-handlers and the REST API accessed by the frontend.
+creates the backend server. This includes the database scraper, the map
+state handlers and the population tracker.
 
 For a list of command line arguments and their purpose, run this script
 with the ``--help`` flag set.
-
 """
 
 import argparse
@@ -97,10 +96,6 @@ if __name__ == '__main__':
         arx_log.setLevel(max(log_level, logging.INFO))
         arx_log.addHandler(fh_)
         arx_log.addHandler(sh_)
-        # Add another logger for the API component
-        api_log = logging.getLogger('api')
-        api_log.setLevel((max(log_level, logging.INFO)))
-        api_log.addHandler(sh_)
     # Run utility
     loop = asyncio.get_event_loop()
     loop.create_task(main(**kwargs))
