@@ -29,10 +29,8 @@ DEFAULT_DB_USER = 'postgres'
 # Logging configuration
 fmt = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 fh_ = logging.FileHandler(filename='debug.log', encoding='utf-8', mode='w+')
-fh_api = logging.FileHandler(filename='api.log', encoding='utf-8', mode='w+')
 sh_ = logging.StreamHandler()
 fh_.setFormatter(fmt)
-fh_api.setFormatter(fmt)
 sh_.setFormatter(fmt)
 
 
@@ -102,7 +100,6 @@ if __name__ == '__main__':
         # Add another logger for the API component
         api_log = logging.getLogger('api')
         api_log.setLevel((max(log_level, logging.INFO)))
-        api_log.addHandler(fh_api)
         api_log.addHandler(sh_)
     # Run utility
     loop = asyncio.get_event_loop()
