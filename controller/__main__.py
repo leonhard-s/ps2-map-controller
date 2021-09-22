@@ -1,4 +1,4 @@
-"""Main script for launching the APL backend component.
+"""Main script for launching the map controller component.
 
 This script sets up logging, checks for database availability and
 creates the backend server. This includes the database scraper, the map
@@ -62,11 +62,11 @@ async def main(service_id: str, db_host: str, db_user: str,
 
 if __name__ == '__main__':
     # Get default values from environment
-    def_service_id = os.getenv('APL_SERVICE_ID', 's:example')
-    def_db_host = os.getenv('APL_DB_HOST', DEFAULT_DB_HOST)
-    def_db_name = os.getenv('APL_DB_NAME', DEFAULT_DB_NAME)
-    def_db_user = os.getenv('APL_DB_USER', DEFAULT_DB_USER)
-    def_db_pass = os.getenv('APL_DB_PASS')
+    def_service_id = os.getenv('SERVICE_ID', 's:example')
+    def_db_host = os.getenv('DB_HOST', DEFAULT_DB_HOST)
+    def_db_name = os.getenv('DB_NAME', DEFAULT_DB_NAME)
+    def_db_user = os.getenv('DB_USER', DEFAULT_DB_USER)
+    def_db_pass = os.getenv('DB_PASS')
     # Define command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(

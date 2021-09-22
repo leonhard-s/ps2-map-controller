@@ -1,4 +1,4 @@
-"""Main backend component of APL.
+"""Main backend component of the map viewer.
 
 This module maintains the main map state representation, which is
 regularly pushed to the database.

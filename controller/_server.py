@@ -15,7 +15,7 @@ log = logging.getLogger('backend')
 
 
 class BackendServer:
-    """Main backend server object for APL.
+    """Main backend server object.
 
     This class joins all of the individual components into a single
     object, mostly to facilitate cross-talk.

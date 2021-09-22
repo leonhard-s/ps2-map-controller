@@ -21,7 +21,7 @@ _BlipT = TypeVar('_BlipT', bound='Blip')
 
 
 class Blip(pydantic.BaseModel):  # pylint: disable=no-member
-    """Base class for custom events ("Blips") used in APL.
+    """Base class for custom events (aka. "Blips").
 
     Any subclasses will be type-checked to ensure they match the type
     annotations.
