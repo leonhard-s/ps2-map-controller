@@ -4,5 +4,5 @@ SELECT (
     "name"
 )
 FROM
-    "Public"."Continent"
+    "API"."Continent"
 ;

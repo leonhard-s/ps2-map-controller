@@ -5,5 +5,5 @@ SELECT (
     "region"
 )
 FROM
-    "Public"."Server"
+    "API"."Server"
 ;

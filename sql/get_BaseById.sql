@@ -8,7 +8,7 @@ SELECT (
     "map_pos_y"
 )
 FROM
-    "Public"."Base"
+    "API"."Base"
 WHERE
     "id" = $1
 ;

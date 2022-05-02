@@ -5,7 +5,7 @@ SELECT (
     "region"
 )
 FROM
-    "Public"."Server"
+    "API"."Server"
 WHERE
     "tracking_enabled" = TRUE
 ;
