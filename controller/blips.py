@@ -56,7 +56,7 @@ class Blip(pydantic.BaseModel):  # pylint: disable=no-member
         optional arguments whose number of attributes exactly matches
         the length of the row.
         """
-        fields: Dict[str, Any] = cls.__fields__  # type: ignore
+        fields: Dict[str, Any] = cls.__fields__
         data: List[Any] = list(row['row'])
         return cls(**{k: data[i] for i, k in enumerate(fields.keys())})
 

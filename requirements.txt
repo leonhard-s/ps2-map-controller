@@ -1,3 +1,4 @@
-auraxium
-asyncpg >= 0.21
+auraxium >= 0.2.0b4
+asyncpg >= 0.25
+asyncpg-stubs >= 0.25
 pydantic >= 1.6.1

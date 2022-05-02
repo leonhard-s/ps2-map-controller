@@ -4,30 +4,30 @@ This module acts as the translator between the Python data
 representations and their database representations.
 
 No SQL should live outside of this module.
-
 """
 
 import asyncio
 import datetime
 import logging
-from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List, Optional, Tuple,
-                    TypeVar, Union, cast)
+from typing import Any, Callable, Coroutine, Iterable, Tuple, TypeVar, cast
 
 import asyncpg
 import pydantic
 
-from ..blips import BaseControl, Blip, PlayerBlip
-from .._cache import tlru_cache
-
-from ._types import Record
+from .blips import BaseControl, Blip, PlayerBlip
+from ._cache import tlru_cache
+from ._typing import Connection, Pool
 
 __all__ = [
     'DatabaseHandler'
 ]
 
-_BlipT = TypeVar('_BlipT', bound=Blip)
-_BlipCallback = Callable[[Iterable[_BlipT]], Union[None, Awaitable[None]]]
-_BlipDispatchTable = Dict[_BlipT, List[_BlipCallback[_BlipT]]]
+T = TypeVar('T')
+
+BlipT = TypeVar('BlipT', bound=Blip)
+BlipHandler = Callable[[Iterable[BlipT]], None | Coroutine[Any, Any, None]]
+BlipCache = dict[BlipT, list[BlipT]]
+BlipDispatchTable = dict[BlipT, list[BlipHandler[BlipT]]]
 
 log = logging.getLogger('backend.database')
 
@@ -48,7 +48,7 @@ class DatabaseHandler:
     :param pool: The connection pool to use for database interactions.
     :param blip_listeners: A mapping of blip types and their respective
         event listener callbacks.
-    :type blip_listeners: Dict[Blip, List[BlipsCallback]]
+    :type blip_listeners: dict[Blip, list[BlipsCallback]]
 
     """
 
@@ -58,9 +58,9 @@ class DatabaseHandler:
         log.info('Establishing database connection pool...')
         # NOTE: Connection pools handle reconnection internally, which saves us
         # the need to handle reconnections ourselves
-        self.pool: asyncpg.pool.Pool = asyncpg.create_pool(  # type: ignore
+        self.pool: Pool = asyncpg.create_pool(
             user=db_user, password=db_pass, database=db_name, host=db_host)
-        self.blip_listeners: _BlipDispatchTable[Any] = {}
+        self.blip_listeners: BlipDispatchTable[Any] = {}
 
     async def async_init(self) -> None:
         """Asynchronous initialisation routine.
@@ -78,7 +78,7 @@ class DatabaseHandler:
         This will wait for any underlying connections to be released
         before terminating the pool.
         """
-        await self.pool.close()  # type: ignore
+        await self.pool.close()
 
     async def fetch_blips(self, min_age: float = 5.0) -> None:
         """Extract and dispatch all recent blips.
@@ -102,10 +102,9 @@ class DatabaseHandler:
         """
         # Get the most recent timestamp for which rows should be returned
         cutoff = datetime.datetime.now() - datetime.timedelta(seconds=min_age)
-        blips: Dict[Blip, List[Any]] = {}
+        blips: BlipCache[Any] = {}
 
-        conn: asyncpg.Connection
-        async with self.pool.acquire() as conn:  # type: ignore
+        async with self.pool.acquire() as conn:
 
             blips[BaseControl] = await _get_base_control_blips(conn, cutoff)
             blips[PlayerBlip] = await _get_player_blips(conn, cutoff)
@@ -128,7 +127,7 @@ class DatabaseHandler:
                 else:
                     loop.call_soon(blip_callback, blips)
 
-    @tlru_cache(maxsize=100, lifetime=60.0)
+    @tlru_cache(maxsize=100, ttl=60.0)
     async def get_base(self, base_id: int
                        ) -> Tuple[int, str, int, str, float, float]:
         """Retrieve a base by ID.
@@ -140,10 +139,8 @@ class DatabaseHandler:
         :raise ValueError: Raised if the given base does not exist.
 
         """
-        conn: asyncpg.Connection
-        row: Optional[Record[str, Any]]
-        async with self.pool.acquire() as conn:  # type: ignore
-            row = await conn.fetchrow(  # type: ignore
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
                 """--sql
                 SELECT
                     ("id", "name", "continent_id", "type"::text,
@@ -160,8 +157,8 @@ class DatabaseHandler:
                   base_id, row_tuple[1])
         return row_tuple
 
-    @tlru_cache(maxsize=10, lifetime=3600.0)
-    async def get_continents(self) -> List[Tuple[int, str]]:
+    @tlru_cache(maxsize=10, ttl=3600.0)
+    async def get_continents(self) -> list[Tuple[int, str]]:
         """Retrieve the list of servers.
 
         This method is cached and safe to call repeatedly.
@@ -170,9 +167,8 @@ class DatabaseHandler:
             by default True.
 
         """
-        conn: asyncpg.Connection
-        async with self.pool.acquire() as conn:  # type: ignore
-            rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
                 """--sql
                 SELECT
                     ("id", "name")
@@ -181,9 +177,9 @@ class DatabaseHandler:
                 ;""")
         return [tuple(r)[0] for r in rows]
 
-    @tlru_cache(maxsize=20, lifetime=3600.0)
+    @tlru_cache(maxsize=20, ttl=3600.0)
     async def get_servers(self, active_only: bool = True
-                          ) -> List[Tuple[int, str, str]]:
+                          ) -> list[Tuple[int, str, str]]:
         """Retrieve the list of servers.
 
         This method is cached and safe to call repeatedly.
@@ -192,11 +188,9 @@ class DatabaseHandler:
             by default True.
 
         """
-        conn: asyncpg.Connection
-        rows: List[Record[str, Any]]
-        async with self.pool.acquire() as conn:  # type: ignore
+        async with self.pool.acquire() as conn:
             if active_only:
-                rows = await conn.fetch(  # type: ignore
+                rows = await conn.fetch(
                     """--sql
                     SELECT
                         ("id", "name", "region")
@@ -206,7 +200,7 @@ class DatabaseHandler:
                         "tracking_enabled" = TRUE
                     ;""")
             else:
-                rows = await conn.fetch(  # type: ignore
+                rows = await conn.fetch(
                     """--sql
                     SELECT
                         ("id", "name", "region")
@@ -216,10 +210,9 @@ class DatabaseHandler:
         return [tuple(r)[0] for r in rows]
 
 
-async def _get_base_control_blips(conn: asyncpg.Connection,
-                                  cutoff: datetime.datetime
-                                  ) -> List[BaseControl]:
-    rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
+async def _get_base_control_blips(conn: Connection, cutoff: datetime.datetime
+                                  ) -> list[BaseControl]:
+    rows = await conn.fetch(
         """--sql
         DELETE FROM
             "event"."BaseControl"
@@ -233,8 +226,8 @@ async def _get_base_control_blips(conn: asyncpg.Connection,
         return []
     log.debug('Fetched %d BaseControl blips from database', len(rows))
 
-    blips: List[BaseControl] = []
-    failed: List[Record[str, Any]] = []
+    blips: list[BaseControl] = []
+    failed: list[Any] = []
     for row in rows:
         try:
             blips.append(BaseControl.from_row(row))
@@ -246,9 +239,9 @@ async def _get_base_control_blips(conn: asyncpg.Connection,
     return blips
 
 
-async def _get_player_blips(conn: asyncpg.Connection,
-                            cutoff: datetime.datetime) -> List[PlayerBlip]:
-    rows: List[Record[str, Any]] = await conn.fetch(  # type: ignore
+async def _get_player_blips(conn: Connection, cutoff: datetime.datetime
+                            ) -> list[PlayerBlip]:
+    rows = await conn.fetch(
         """--sql
         DELETE FROM
             "event"."PlayerBlip"
@@ -261,8 +254,8 @@ async def _get_player_blips(conn: asyncpg.Connection,
         return []
     log.debug('Fetched %d PlayerBlip from database', len(rows))
 
-    blips: List[PlayerBlip] = []
-    failed: List[Record[str, Any]] = []
+    blips: list[PlayerBlip] = []
+    failed: list[Any] = []
     for row in rows:
         try:
             blips.append(PlayerBlip.from_row(row))
