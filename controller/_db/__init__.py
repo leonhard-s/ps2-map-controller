@@ -15,9 +15,9 @@ from typing import (Any, Awaitable, Callable, Coroutine, Dict, Iterable, List, O
 
 import asyncpg
 import pydantic
-import tlru_cache
 
 from ..blips import BaseControl, Blip, PlayerBlip
+from .._cache import tlru_cache
 
 from ._types import Record
 
@@ -128,7 +128,7 @@ class DatabaseHandler:
                 else:
                     loop.call_soon(blip_callback, blips)
 
-    @tlru_cache.tlru_cache(maxsize=100, lifetime=60.0)
+    @tlru_cache(maxsize=100, lifetime=60.0)
     async def get_base(self, base_id: int
                        ) -> Tuple[int, str, int, str, float, float]:
         """Retrieve a base by ID.
@@ -160,7 +160,7 @@ class DatabaseHandler:
                   base_id, row_tuple[1])
         return row_tuple
 
-    @tlru_cache.tlru_cache(maxsize=10, lifetime=3600.0)
+    @tlru_cache(maxsize=10, lifetime=3600.0)
     async def get_continents(self) -> List[Tuple[int, str]]:
         """Retrieve the list of servers.
 
@@ -181,7 +181,7 @@ class DatabaseHandler:
                 ;""")
         return [tuple(r)[0] for r in rows]
 
-    @tlru_cache.tlru_cache(maxsize=20, lifetime=3600.0)
+    @tlru_cache(maxsize=20, lifetime=3600.0)
     async def get_servers(self, active_only: bool = True
                           ) -> List[Tuple[int, str, str]]:
         """Retrieve the list of servers.
