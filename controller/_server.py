@@ -3,7 +3,6 @@
 import asyncio
 import datetime
 import logging
-from typing import Dict
 
 import auraxium
 
@@ -32,7 +31,7 @@ class BackendServer:
 
     def __init__(self, arx_client: auraxium.Client,
                  db_handler: DatabaseHandler,
-                 map_handlers: Dict[int, MapHandler]) -> None:
+                 map_handlers: dict[int, MapHandler]) -> None:
         self._is_active = True
         self.arx_client = arx_client
         self.db_handler = db_handler

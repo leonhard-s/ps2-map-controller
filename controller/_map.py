@@ -2,7 +2,7 @@
 
 
 import logging
-from typing import Dict, Iterable, List, TypeVar
+from typing import Iterable, TypeVar
 
 from .blips import Blip, PlayerBlip, BaseControl, RelativePlayerBlip
 
@@ -16,7 +16,7 @@ class ContinentInstance:
 
     def __init__(self, continent_id: int) -> None:
         self.continent_id = continent_id
-        self._base_owners: Dict[int, int] = {}
+        self._base_owners: dict[int, int] = {}
 
     def clear(self) -> None:
         """Reset the continent handler.
@@ -76,11 +76,12 @@ class MapHandler:
     """
 
     def __init__(self, server_id: int, continents: Iterable[int]) -> None:
-        self.continents: Dict[int, ContinentInstance] = {
+        self.continents: dict[int, ContinentInstance] = {
             i: ContinentInstance(i) for i in continents}
         self.server_id = server_id
 
     def dispatch_base_control(self, blips: Iterable[BaseControl]) -> None:
+        """Dispatch base control blips to the continent handler."""
         grouped = self._group_blips(blips)
         for continent_id, continent_blips in grouped.items():
             self.continents[continent_id].process_base_control_blips(
@@ -113,7 +114,7 @@ class MapHandler:
         for continent in self.continents.values():
             continent.clear()
 
-    def _group_blips(self, blips: Iterable[_BlipT]) -> Dict[int, List[_BlipT]]:
+    def _group_blips(self, blips: Iterable[_BlipT]) -> dict[int, list[_BlipT]]:
         """Group the given blips by their continent ID.
 
         Additionally, this will discard any blips for other server IDs
@@ -123,7 +124,7 @@ class MapHandler:
             blips (Iterable[_BlipT]): The blips to group.
 
         Returns:
-            Dict[int, List[_BlipT]]: A dictionary mapping the map
+            dict[int, list[_BlipT]]: A dictionary mapping the map
             handler's valid continent IDs to blips that must be
             forwarded to that continent's state handler.
 
@@ -133,7 +134,7 @@ class MapHandler:
             return blip.server_id == self.server_id
 
         filtered = filter(is_valid, blips)
-        grouped: Dict[int, List[_BlipT]] = {i: [] for i in self.continents}
+        grouped: dict[int, list[_BlipT]] = {i: [] for i in self.continents}
         for blip in filtered:
             grouped[blip.continent_id].append(blip)
         return grouped

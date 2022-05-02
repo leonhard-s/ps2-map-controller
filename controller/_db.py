@@ -9,7 +9,7 @@ No SQL should live outside of this module.
 import asyncio
 import datetime
 import logging
-from typing import Any, Callable, Coroutine, Iterable, Tuple, TypeVar, cast
+from typing import Any, Callable, Coroutine, Iterable, TypeVar, cast
 
 import asyncpg
 import pydantic
@@ -129,7 +129,7 @@ class DatabaseHandler:
 
     @tlru_cache(maxsize=100, ttl=60.0)
     async def get_base(self, base_id: int
-                       ) -> Tuple[int, str, int, str, float, float]:
+                       ) -> tuple[int, str, int, str, float, float]:
         """Retrieve a base by ID.
 
         This method is cached and safe to call repeatedly.
@@ -152,13 +152,13 @@ class DatabaseHandler:
                 ;""", base_id)
         if row is None:
             raise ValueError(f'Base ID not found: {base_id}')
-        row_tuple: Tuple[int, str, int, str, float, float] = tuple(row)[0]
+        row_tuple: tuple[int, str, int, str, float, float] = tuple(row)[0]
         log.debug('Cache miss: fetched base %d (%s) from database',
                   base_id, row_tuple[1])
         return row_tuple
 
     @tlru_cache(maxsize=10, ttl=3600.0)
-    async def get_continents(self) -> list[Tuple[int, str]]:
+    async def get_continents(self) -> list[tuple[int, str]]:
         """Retrieve the list of servers.
 
         This method is cached and safe to call repeatedly.
@@ -179,7 +179,7 @@ class DatabaseHandler:
 
     @tlru_cache(maxsize=20, ttl=3600.0)
     async def get_servers(self, active_only: bool = True
-                          ) -> list[Tuple[int, str, str]]:
+                          ) -> list[tuple[int, str, str]]:
         """Retrieve the list of servers.
 
         This method is cached and safe to call repeatedly.
