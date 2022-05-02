@@ -32,6 +32,21 @@ BlipDispatchTable = dict[BlipT, list[BlipHandler[BlipT]]]
 log = logging.getLogger('backend.database')
 
 
+# Load SQL commands from file
+with open('sql/get_BaseById.sql', encoding='utf-8') as sql_file:
+    _GET_BASE_BY_ID_SQL = sql_file.read()
+with open('sql/get_Continents.sql', encoding='utf-8') as sql_file:
+    _GET_CONTINENTS_SQL = sql_file.read()
+with open('sql/get_Servers.sql', encoding='utf-8') as sql_file:
+    _GET_SERVERS_SQL = sql_file.read()
+with open('sql/get_TrackedServers.sql', encoding='utf-8') as sql_file:
+    _GET_TRACKED_SERVERS_SQL = sql_file.read()
+with open('sql/pop_BaseControl.sql', encoding='utf-8') as sql_file:
+    _POP_BASE_CONTROL_SQL = sql_file.read()
+with open('sql/pop_PlayerBlip.sql', encoding='utf-8') as sql_file:
+    _POP_PLAYER_BLIP_SQL = sql_file.read()
+
+
 class DatabaseHandler:
     """Wrapper for Database interactions.
 
@@ -140,16 +155,7 @@ class DatabaseHandler:
 
         """
         async with self.pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """--sql
-                SELECT
-                    ("id", "name", "continent_id", "type"::text,
-                     "map_pos_x", "map_pos_y")
-                FROM
-                    "autopl"."Base"
-                WHERE
-                    "id" = $1
-                ;""", base_id)
+            row = await conn.fetchrow(_GET_BASE_BY_ID_SQL, base_id)
         if row is None:
             raise ValueError(f'Base ID not found: {base_id}')
         row_tuple: tuple[int, str, int, str, float, float] = tuple(row)[0]
@@ -168,13 +174,7 @@ class DatabaseHandler:
 
         """
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch(
-                """--sql
-                SELECT
-                    ("id", "name")
-                FROM
-                    "autopl"."Continent"
-                ;""")
+            rows = await conn.fetch(_GET_CONTINENTS_SQL)
         return [tuple(r)[0] for r in rows]
 
     @tlru_cache(maxsize=20, ttl=3600.0)
@@ -190,38 +190,15 @@ class DatabaseHandler:
         """
         async with self.pool.acquire() as conn:
             if active_only:
-                rows = await conn.fetch(
-                    """--sql
-                    SELECT
-                        ("id", "name", "region")
-                    FROM
-                        "autopl"."Server"
-                    WHERE
-                        "tracking_enabled" = TRUE
-                    ;""")
+                rows = await conn.fetch(_GET_TRACKED_SERVERS_SQL)
             else:
-                rows = await conn.fetch(
-                    """--sql
-                    SELECT
-                        ("id", "name", "region")
-                    FROM
-                        "autopl"."Server"
-                    ;""")
+                rows = await conn.fetch(_GET_SERVERS_SQL)
         return [tuple(r)[0] for r in rows]
 
 
 async def _get_base_control_blips(conn: Connection, cutoff: datetime.datetime
                                   ) -> list[BaseControl]:
-    rows = await conn.fetch(
-        """--sql
-        DELETE FROM
-            "event"."BaseControl"
-        WHERE
-            "timestamp" < $1
-        RETURNING
-            ("timestamp", "server_id", "continent_id", "base_id",
-             "old_faction_id", "new_faction_id")
-        ;""", cutoff)
+    rows = await conn.fetch(_POP_BASE_CONTROL_SQL, cutoff)
     if not rows:
         return []
     log.debug('Fetched %d BaseControl blips from database', len(rows))
@@ -241,15 +218,7 @@ async def _get_base_control_blips(conn: Connection, cutoff: datetime.datetime
 
 async def _get_player_blips(conn: Connection, cutoff: datetime.datetime
                             ) -> list[PlayerBlip]:
-    rows = await conn.fetch(
-        """--sql
-        DELETE FROM
-            "event"."PlayerBlip"
-        WHERE
-            "timestamp" < $1
-        RETURNING
-            ("timestamp", "server_id", "continent_id", "player_id", "base_id")
-        ;""", cutoff)
+    rows = await conn.fetch(_POP_PLAYER_BLIP_SQL, cutoff)
     if not rows:
         return []
     log.debug('Fetched %d PlayerBlip from database', len(rows))
