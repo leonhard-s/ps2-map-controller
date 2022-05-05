@@ -15,7 +15,7 @@ import os
 
 import auraxium
 
-from ._db import DatabaseHandler
+from ._blip_handler import DatabaseHandler
 from ._map import MapHandler
 from ._server import BackendServer
 

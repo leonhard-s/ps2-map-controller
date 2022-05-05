@@ -7,7 +7,7 @@ import logging
 import auraxium
 
 from .blips import BaseControl, PlayerBlip
-from ._db import DatabaseHandler
+from ._blip_handler import DatabaseHandler
 from ._map import MapHandler
 
 log = logging.getLogger('backend')
