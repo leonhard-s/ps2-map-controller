@@ -7,7 +7,7 @@ import logging
 import auraxium
 
 from .blips import BaseControl, PlayerBlip
-from ._db import DatabaseHandler
+from ._blip_handler import DatabaseHandler
 from ._map import MapHandler
 
 log = logging.getLogger('backend')
@@ -64,7 +64,6 @@ class BackendServer:
         called immediately after the regular initialiser every time.
 
         """
-        await self.db_handler.async_init()
         loop = asyncio.get_running_loop()
         loop.create_task(self._database_scraper())
 
