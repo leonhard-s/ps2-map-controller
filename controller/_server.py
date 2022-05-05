@@ -64,7 +64,6 @@ class BackendServer:
         called immediately after the regular initialiser every time.
 
         """
-        await self.db_handler.async_init()
         loop = asyncio.get_running_loop()
         loop.create_task(self._database_scraper())
 

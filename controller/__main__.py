@@ -23,7 +23,8 @@ log = logging.getLogger('backend')
 
 # Default database configuration
 DEFAULT_DB_HOST = '127.0.0.1'
-DEFAULT_DB_NAME = 'postgres'
+DEFAULT_DB_PORT = 5432
+DEFAULT_DB_NAME = 'PS2Map'
 DEFAULT_DB_USER = 'postgres'
 
 # Logging configuration
@@ -34,7 +35,7 @@ fh_.setFormatter(fmt)
 sh_.setFormatter(fmt)
 
 
-async def main(service_id: str, db_host: str, db_user: str,
+async def main(service_id: str, db_host: str, db_port: int, db_user: str,
                db_pass: str, db_name: str) -> None:
     """Asynchronous component of the main listener script.
 
@@ -48,8 +49,7 @@ async def main(service_id: str, db_host: str, db_user: str,
     log.info('Setting up Auraxium API client...')
     arx_client = auraxium.Client(service_id=service_id)
     log.info('Starting database handler...')
-    db_handler = DatabaseHandler(
-        db_host=db_host, db_user=db_user, db_pass=db_pass, db_name=db_name)
+    db_handler = DatabaseHandler(db_host, db_port, db_user, db_pass, db_name)
     log.info('Initialising backend server...')
     server = BackendServer(arx_client, db_handler, {})
     await server.async_init()
@@ -64,6 +64,7 @@ if __name__ == '__main__':
     # Get default values from environment
     def_service_id = os.getenv('SERVICE_ID', 's:example')
     def_db_host = os.getenv('DB_HOST', DEFAULT_DB_HOST)
+    def_db_port = int(os.getenv('DB_PORT', str(DEFAULT_DB_PORT)))
     def_db_name = os.getenv('DB_NAME', DEFAULT_DB_NAME)
     def_db_user = os.getenv('DB_USER', DEFAULT_DB_USER)
     def_db_pass = os.getenv('DB_PASS')

@@ -11,18 +11,19 @@ import datetime
 import logging
 from typing import Any, Callable, Coroutine, Iterable, TypeVar, cast
 
-import asyncpg
+import psycopg
+import psycopg_pool
 import pydantic
 
 from .blips import BaseControl, Blip, PlayerBlip
 from ._cache import tlru_cache
-from ._typing import Connection, Pool
 
 __all__ = [
     'DatabaseHandler'
 ]
 
 T = TypeVar('T')
+Row = TypeVar('Row')
 
 BlipT = TypeVar('BlipT', bound=Blip)
 BlipHandler = Callable[[Iterable[BlipT]], None | Coroutine[Any, Any, None]]
@@ -31,6 +32,7 @@ BlipDispatchTable = dict[BlipT, list[BlipHandler[BlipT]]]
 
 log = logging.getLogger('backend.database')
 
+Connection = psycopg.AsyncConnection[Row]
 
 # Load SQL commands from file
 with open('sql/get_BaseById.sql', encoding='utf-8') as sql_file:
@@ -67,25 +69,21 @@ class DatabaseHandler:
 
     """
 
-    def __init__(self, db_host: str, db_user: str,
+    def __init__(self, db_host: str, db_port: int, db_user: str,
                  db_pass: str, db_name: str) -> None:
         # Create a connection pool for the database connection
         log.info('Establishing database connection pool...')
         # NOTE: Connection pools handle reconnection internally, which saves us
         # the need to handle reconnections ourselves
-        self.pool: Pool = asyncpg.create_pool(
-            user=db_user, password=db_pass, database=db_name, host=db_host)
+        conn_str = (
+            f'host={db_host} '
+            f'port={db_port} '
+            f'user={db_user} '
+            f'password={db_pass} '
+            f'dbname={db_name}'
+        )
+        self.pool = psycopg_pool.AsyncConnectionPool(conn_str)
         self.blip_listeners: BlipDispatchTable[Any] = {}
-
-    async def async_init(self) -> None:
-        """Asynchronous initialisation routine.
-
-        This is similar in principle to :meth:`__init__()`, but must be
-        called separately due to being a coroutine. This method must be
-        called immediately after the regular initialiser every time.
-
-        """
-        await self.pool  # Calls the pool's asynchronous initialiser
 
     async def close(self) -> None:
         """Close the database handler and the underlying connection.
@@ -119,8 +117,7 @@ class DatabaseHandler:
         cutoff = datetime.datetime.now() - datetime.timedelta(seconds=min_age)
         blips: BlipCache[Any] = {}
 
-        async with self.pool.acquire() as conn:
-
+        async with self.pool.connection() as conn:
             blips[BaseControl] = await _get_base_control_blips(conn, cutoff)
             blips[PlayerBlip] = await _get_player_blips(conn, cutoff)
 
@@ -154,11 +151,14 @@ class DatabaseHandler:
         :raise ValueError: Raised if the given base does not exist.
 
         """
-        async with self.pool.acquire() as conn:
-            row = await conn.fetchrow(_GET_BASE_BY_ID_SQL, base_id)
+        async with self.pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(_GET_BASE_BY_ID_SQL, (base_id,))
+                row = await cur.fetchone()
         if row is None:
             raise ValueError(f'Base ID not found: {base_id}')
-        row_tuple: tuple[int, str, int, str, float, float] = tuple(row)[0]
+        row_tuple: tuple[int, str, int, str, float, float] = (
+            tuple(cast(Any, row))[0])
         log.debug('Cache miss: fetched base %d (%s) from database',
                   base_id, row_tuple[1])
         return row_tuple
@@ -173,8 +173,10 @@ class DatabaseHandler:
             by default True.
 
         """
-        async with self.pool.acquire() as conn:
-            rows = await conn.fetch(_GET_CONTINENTS_SQL)
+        async with self.pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(_GET_CONTINENTS_SQL)
+                rows = await cur.fetchall()
         return [tuple(r)[0] for r in rows]
 
     @tlru_cache(maxsize=20, ttl=3600.0)
@@ -188,17 +190,21 @@ class DatabaseHandler:
             by default True.
 
         """
-        async with self.pool.acquire() as conn:
-            if active_only:
-                rows = await conn.fetch(_GET_TRACKED_SERVERS_SQL)
-            else:
-                rows = await conn.fetch(_GET_SERVERS_SQL)
+        async with self.pool.connection() as conn:
+            async with conn.cursor() as cur:
+                if active_only:
+                    await conn.execute(_GET_TRACKED_SERVERS_SQL)
+                else:
+                    await conn.execute(_GET_SERVERS_SQL)
+                rows = await cur.fetchall()
         return [tuple(r)[0] for r in rows]
 
 
-async def _get_base_control_blips(conn: Connection, cutoff: datetime.datetime
+async def _get_base_control_blips(conn: Connection[Row], cutoff: datetime.datetime
                                   ) -> list[BaseControl]:
-    rows = await conn.fetch(_POP_BASE_CONTROL_SQL, cutoff)
+    async with conn.cursor() as cur:
+        await cur.execute(_POP_BASE_CONTROL_SQL, (cutoff,))
+        rows = await cur.fetchall()
     if not rows:
         return []
     log.debug('Fetched %d BaseControl blips from database', len(rows))
@@ -216,9 +222,11 @@ async def _get_base_control_blips(conn: Connection, cutoff: datetime.datetime
     return blips
 
 
-async def _get_player_blips(conn: Connection, cutoff: datetime.datetime
+async def _get_player_blips(conn: Connection[Row], cutoff: datetime.datetime
                             ) -> list[PlayerBlip]:
-    rows = await conn.fetch(_POP_PLAYER_BLIP_SQL, cutoff)
+    async with conn.cursor() as cur:
+        await cur.execute(_POP_PLAYER_BLIP_SQL, (cutoff,))
+        rows = await cur.fetchall()
     if not rows:
         return []
     log.debug('Fetched %d PlayerBlip from database', len(rows))
