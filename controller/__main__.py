@@ -61,6 +61,9 @@ async def main(service_id: str, db_host: str, db_port: int, db_user: str,
 
 
 if __name__ == '__main__':
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsSelectorEventLoopPolicy())
+
     # Get default values from environment
     def_service_id = os.getenv('SERVICE_ID', 's:example')
     def_db_host = os.getenv('DB_HOST', DEFAULT_DB_HOST)
@@ -108,7 +111,7 @@ if __name__ == '__main__':
         arx_log.addHandler(fh_)
         arx_log.addHandler(sh_)
     # Run utility
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.create_task(main(**kwargs))
     try:
         loop.run_forever()
@@ -119,3 +122,7 @@ if __name__ == '__main__':
     except BaseException as err:
         log.exception('An unhandled exception occurred:')
         raise err from err
+    finally:
+        loop.stop()
+        for task in asyncio.all_tasks(loop):
+            task.cancel()
