@@ -83,6 +83,9 @@ if __name__ == '__main__':
         '--db-host', '-H', default=def_db_host,
         help='The address of the database host')
     parser.add_argument(
+        '--db-port', '-T', default=def_db_port,
+        help='The port of the database host')
+    parser.add_argument(
         '--db-name', '-N', default=def_db_name,
         help='The name of the database to access')
     parser.add_argument(
