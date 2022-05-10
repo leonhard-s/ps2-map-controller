@@ -12,7 +12,7 @@ P = ParamSpec('P')
 
 Coro = Callable[P, Coroutine[Any, Any, T]]
 Args = tuple[Any, ...]
-Kwargs = dict[str, Any]
+Kwargs = tuple[tuple[str, Any], ...]
 
 
 def tlru_cache(maxsize: int = 128, ttl: float = 60.0
@@ -32,7 +32,7 @@ def tlru_cache(maxsize: int = 128, ttl: float = 60.0
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             nonlocal cache
             now = time.time()
-            key: tuple[tuple[Any, ...], dict[str, Any]] = (args, kwargs)
+            key: tuple[Args, Kwargs] = args, tuple(kwargs.items())
             # Check for cache hit
             if key in cache:
                 value, last_access = cache[key]
