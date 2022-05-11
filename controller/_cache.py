@@ -17,7 +17,7 @@ Kwargs = tuple[tuple[str, Any], ...]
 
 def tlru_cache(maxsize: int = 128, ttl: float = 60.0
                ) -> Callable[[Coro[P, T]], Coro[P, T]]:
-    """Tine aware least recently used cache decorator.
+    """Time aware least recently used cache decorator.
 
     This decorator largely mirrors the behaviour of
     functools.lru_cache(). However, it expects asynchronous decorator
