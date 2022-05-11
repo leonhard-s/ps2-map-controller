@@ -2,7 +2,9 @@
 
 
 import logging
-from typing import Iterable, TypeVar
+from typing import Any, Iterable, TypeVar, cast
+
+import auraxium
 
 from .blips import Blip, PlayerBlip, BaseControl, RelativePlayerBlip
 
@@ -25,6 +27,10 @@ class ContinentInstance:
         the state it was in when it first started.
         """
         self._base_owners.clear()
+
+    def set_ownership(self, base_id: int, owner_id: int) -> None:
+        """Set the ownership of a base."""
+        self._base_owners[base_id] = owner_id
 
     def process_base_control_blips(self, blips: Iterable[BaseControl]) -> None:
         """Event handler for :class:`BaseControl` blips.
@@ -75,10 +81,44 @@ class MapHandler:
 
     """
 
-    def __init__(self, server_id: int, continents: Iterable[int]) -> None:
+    def __init__(self, server_id: int, continents: Iterable[int],
+                 service_id: str = 's:example') -> None:
         self.continents: dict[int, ContinentInstance] = {
             i: ContinentInstance(i) for i in continents}
         self.server_id = server_id
+        self._arx_client = auraxium.Client(service_id=service_id)
+        # Queue initial setup
+        loop = self._arx_client.loop
+        loop.create_task(self._async_init())
+
+    async def _async_init(self) -> None:
+        """Initialize the map handler using the REST endpoint."""
+        # Build request via Census
+        query = auraxium.census.Query(
+            'map', service_id=self._arx_client.service_id)
+        query.add_term('world_id', self.server_id)
+        query.add_term('zone_ids', ','.join(
+            [str(i) for i in self.continents.keys()]))
+        # Perform request
+        data = await self._arx_client.request(query)
+        # Process response
+        facility_ownership: dict[int, int] = {}
+        map_list = cast(list[dict[str, Any]], data['map_list'])
+        for zone_obj in map_list:
+            facility_ownership.clear()
+            zone_id = int(zone_obj['ZoneId'])
+            # Process base ownership data
+            for row_obj in zone_obj['Regions']['Row']:
+                row_data = row_obj['RowData']
+                region_id = int(row_data['RegionId'])
+                faction_id = int(row_data['FactionId'])
+                facility_ownership[region_id] = faction_id
+            # Apply new ownership
+            continent_instance = self.continents[zone_id]
+            for facility_id, faction_id in facility_ownership.items():
+                continent_instance.set_ownership(facility_id, faction_id)
+        # Clean up
+        await self._arx_client.close()
 
     def dispatch_base_control(self, blips: Iterable[BaseControl]) -> None:
         """Dispatch base control blips to the continent handler."""

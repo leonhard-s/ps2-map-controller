@@ -57,7 +57,9 @@ async def main(service_id: str, db_host: str, db_port: int, db_user: str,
     servers = [id_ for id_, *_ in await db_handler.get_servers()]
     continents = [id_ for id_, _ in await db_handler.get_continents()]
     log.info('Spawning map handlers (monitoring %d servers)', len(servers))
-    server.map_handlers = {i: MapHandler(i, continents) for i in servers}
+    server.map_handlers = {
+        i: MapHandler(i, continents, service_id=arx_client.service_id)
+        for i in servers}
 
 
 if __name__ == '__main__':
