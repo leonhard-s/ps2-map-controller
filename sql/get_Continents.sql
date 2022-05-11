@@ -4,5 +4,5 @@ SELECT (
     "name"
 )
 FROM
-    "API"."Continent"
+    "API_static"."Continent"
 ;
