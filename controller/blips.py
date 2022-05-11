@@ -57,8 +57,7 @@ class Blip(pydantic.BaseModel):  # pylint: disable=no-member
         the length of the row.
         """
         fields: dict[str, Any] = cls.__fields__
-        data: list[Any] = list(row['row'])
-        return cls(**{k: data[i] for i, k in enumerate(fields.keys())})
+        return cls(**{k: row[i] for i, k in enumerate(fields.keys())})
 
 
 class PlayerBlip(Blip):

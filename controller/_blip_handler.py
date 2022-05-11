@@ -153,7 +153,11 @@ class DatabaseHandler:
             async with conn.cursor() as cur:
                 await cur.execute(GET_CONTINENTS_SQL)
                 rows = await cur.fetchall()
-        return [tuple(r)[0] for r in rows]
+        continents: list[tuple[int, str]] = []
+        for row in rows:
+            row = row[0]
+            continents.append((int(row[0]), str(row[1])))
+        return continents
 
     @tlru_cache(maxsize=20, ttl=3600.0)
     async def get_servers(self, active_only: bool = True
@@ -169,11 +173,15 @@ class DatabaseHandler:
         async with self.pool.connection() as conn:
             async with conn.cursor() as cur:
                 if active_only:
-                    await conn.execute(GET_TRACKED_SERVERS_SQL)
+                    await cur.execute(GET_TRACKED_SERVERS_SQL)
                 else:
-                    await conn.execute(GET_SERVERS_SQL)
+                    await cur.execute(GET_SERVERS_SQL)
                 rows = await cur.fetchall()
-        return [tuple(r)[0] for r in rows]
+        servers: list[tuple[int, str, str]] = []
+        for row in rows:
+            row = row[0]
+            servers.append((int(row[0]), str(row[1]), str(row[2])))
+        return servers
 
 
 async def _get_base_control_blips(conn: Connection[Row], cutoff: datetime.datetime
@@ -187,10 +195,12 @@ async def _get_base_control_blips(conn: Connection[Row], cutoff: datetime.dateti
 
     blips: list[BaseControl] = []
     failed: list[Any] = []
+    row: Any
     for row in rows:
         try:
+            row = row[0]
             blips.append(BaseControl.from_row(row))
-        except pydantic.ValidationError:
+        except (pydantic.ValidationError, IndexError):
             failed.append(row)
     if failed:
         log.warning('Skipped %d invalid rows; first: %s',

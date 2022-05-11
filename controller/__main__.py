@@ -52,10 +52,10 @@ async def main(service_id: str, db_host: str, db_port: int, db_user: str,
     db_handler = DatabaseHandler(db_host, db_port, db_user, db_pass, db_name)
     log.info('Initialising backend server...')
     server = BackendServer(arx_client, db_handler, {})
-    await server.async_init()
     log.info('Retrieving static tables...')
-    servers = [s[0] for s in await db_handler.get_servers()]
-    continents = [i[0] for i in await db_handler.get_continents()]
+    await server.async_init()
+    servers = [id_ for id_, *_ in await db_handler.get_servers()]
+    continents = [id_ for id_, _ in await db_handler.get_continents()]
     log.info('Spawning map handlers (monitoring %d servers)', len(servers))
     server.map_handlers = {i: MapHandler(i, continents) for i in servers}
 

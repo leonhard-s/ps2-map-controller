@@ -2,7 +2,7 @@
 DELETE FROM
     "Blip"."BaseControl"
 WHERE
-    "timestamp" < $1
+    "timestamp" < %s
 RETURNING (
     "timestamp",
     "server_id",
