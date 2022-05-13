@@ -1,8 +1,6 @@
 -- Retrieve all tracked servers from the database
 SELECT (
-    "id",
-    "name",
-    "region"
+    "id"
 )
 FROM
     "API_static"."Server"
