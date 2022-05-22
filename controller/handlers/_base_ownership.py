@@ -10,7 +10,8 @@ import auraxium
 from ..abc import EventHandler
 from ..events import BaseControl, Event
 from .._db import Pool
-from .._sql import SQL_GET_CONTINENTS, SQL_GET_TRACKED_SERVERS
+from .._sql import (SQL_GET_CONTINENTS, SQL_GET_TRACKED_SERVERS,
+                    SQL_UPDATE_BASE_OWNERSHIP)
 
 
 log = logging.getLogger('controller.base_ownership')
@@ -33,6 +34,7 @@ class BaseOwnershipController(EventHandler):
             int, dict[int, tuple[int, datetime.datetime]]] = {}
         self._initializing: bool = True
         asyncio.get_event_loop().create_task(self.__ainit__())
+        asyncio.get_event_loop().create_task(self.sync())
 
     async def __ainit__(self) -> None:
         """Asynchronous initializer."""
@@ -53,6 +55,22 @@ class BaseOwnershipController(EventHandler):
         if events and isinstance(events[0], BaseControl):
             self._set_base_ownership(
                 events[0].server_id, typing.cast(list[BaseControl], events))
+
+    async def sync(self) -> None:
+        """Synchronize the DB with the local controller state."""
+        while True:
+            await asyncio.sleep(5.0)
+            if self._initializing:
+                continue
+            log.info('Synchronizing controller state')
+            async with self._db_pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    for server_id, base_map in self._ownership_map.items():
+                        params: list[tuple[int, datetime.datetime, int,  int]]
+                        params = [(faction_id, timestamp, base_id, server_id)
+                                  for base_id, (faction_id, timestamp)
+                                  in base_map.items()]
+                        await cur.executemany(SQL_UPDATE_BASE_OWNERSHIP, params)
 
     async def _initialize(self) -> None:
         """Initialize the controller."""
