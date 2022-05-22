@@ -3,6 +3,7 @@
 import os
 
 __all__ = [
+    'SQL_POP_BASE_CONTROL',
     'SQL_GET_CONTINENTS',
     'SQL_GET_TRACKED_SERVERS',
 ]
@@ -18,5 +19,6 @@ def _get_sql(filename: str) -> str:
         return sql_file.read()
 
 
+SQL_POP_BASE_CONTROL = _get_sql('pop_BaseControl.sql')
 SQL_GET_CONTINENTS = _get_sql('get_Continents.sql')
 SQL_GET_TRACKED_SERVERS = _get_sql('get_TrackedServers.sql')
