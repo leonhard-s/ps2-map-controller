@@ -4,6 +4,7 @@ SET
     "owning_faction_id" = %s,
     "owned_since" = %s
 WHERE
-    "base_id" = $s,
-    "server_id" = $s
+    "base_id" = %s
+AND
+    "server_id" = %s
 ;
