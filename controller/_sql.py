@@ -3,12 +3,10 @@
 import os
 
 __all__ = [
-    'GET_BASE_BY_ID_SQL',
-    'GET_CONTINENTS_SQL',
-    'GET_SERVERS_SQL',
-    'GET_TRACKED_SERVERS_SQL',
-    'POP_BASE_CONTROL_SQL',
-    'POP_PLAYER_BLIP_SQL',
+    'SQL_POP_BASE_CONTROL',
+    'SQL_GET_CONTINENTS',
+    'SQL_GET_TRACKED_SERVERS',
+    'SQL_UPDATE_BASE_OWNERSHIP',
 ]
 
 # Relative directory to the SQL files
@@ -22,9 +20,7 @@ def _get_sql(filename: str) -> str:
         return sql_file.read()
 
 
-GET_BASE_BY_ID_SQL = _get_sql('get_BaseById.sql')
-GET_CONTINENTS_SQL = _get_sql('get_Continents.sql')
-GET_SERVERS_SQL = _get_sql('get_Servers.sql')
-GET_TRACKED_SERVERS_SQL = _get_sql('get_TrackedServers.sql')
-POP_BASE_CONTROL_SQL = _get_sql('pop_BaseControl.sql')
-POP_PLAYER_BLIP_SQL = _get_sql('pop_PlayerBlip.sql')
+SQL_POP_BASE_CONTROL = _get_sql('pop_BaseControl.sql')
+SQL_GET_CONTINENTS = _get_sql('get_Continents.sql')
+SQL_GET_TRACKED_SERVERS = _get_sql('get_TrackedServers.sql')
+SQL_UPDATE_BASE_OWNERSHIP = _get_sql('update_BaseOwnership.sql')

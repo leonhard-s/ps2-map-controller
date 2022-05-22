@@ -1,7 +1,7 @@
-"""Utility module for the database driver.
+"""Database utility module.
 
-This module contains any database-driver-specific functionality to keep
-switching database drivers easy and error-free.
+This module provides type aliases and wrapper functions for any
+database-driver-specific idiosyncracies and convnersions required.
 """
 
 import typing
@@ -9,31 +9,33 @@ import typing
 import psycopg
 import psycopg_pool
 
-__all__ = [
-    'Connection',
-    'Cursor',
-    'Pool',
-    'create_pool',
-    'ForeignKeyViolation',
-]
+T = typing.TypeVar('T')
 
-Row = typing.TypeVar('Row')
-Connection = psycopg.AsyncConnection[Row]
-Cursor = psycopg.AsyncCursor[Row]
+# Type Aliases
+Connection = psycopg.AsyncConnection[T]
+Cursor = psycopg.AsyncCursor[T]
 Pool = psycopg_pool.AsyncConnectionPool
 
-# Errors
+# Exception aliases
 ForeignKeyViolation = psycopg.errors.ForeignKeyViolation
+UniqueViolation = psycopg.errors.UniqueViolation
 
 
 def create_pool(host: str, port: int, user: str, password: str,
                 database: str) -> Pool:
-    """Create a new connection pool to the database."""
-    conn_str = (
-        f'host={host} '
-        f'port={port} '
-        f'user={user} '
-        f'password={password} '
-        f'dbname={database}'
-    )
-    return Pool(conn_str)
+    """Create a new connection pool to the database.
+
+    Args:
+        host: Hostname of the database server.
+        port: Port of the database server.
+        user: Username to connect to the database.
+        password: Password to connect to the database.
+        database: Name of the database to connect to.
+
+    """
+    connection_string = (f'host={host} '
+                         f'port={port} '
+                         f'user={user} '
+                         f'password={password} '
+                         f'dbname={database}')
+    return psycopg_pool.AsyncConnectionPool(connection_string)

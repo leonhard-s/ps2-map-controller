@@ -1,8 +1,9 @@
--- Return all known continents from the database
+-- Retrieve all supported continents from the database
 SELECT (
-    "id",
-    "name"
+    "id"
 )
 FROM
     "API_static"."Continent"
+WHERE
+    "hidden" = false
 ;

@@ -1,6 +1,5 @@
--- Deletes and returns all BaseControl Blips from the database
-DELETE FROM
-    "Blip"."BaseControl"
+-- Delete all "BaseControl" events and return them
+DELETE FROM "EventBuffer"."BaseControl"
 WHERE
     "timestamp" < %s
 RETURNING (

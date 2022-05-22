@@ -1,8 +1,7 @@
-"""Main script for launching the map controller component.
+"""Main script for launching the backend map server.
 
-This script sets up logging, checks for database availability and
-creates the backend server. This includes the database scraper, the map
-state handlers and the population tracker.
+This script sets up logging, connects to the database and sets up the
+event dispatching system.
 
 For a list of command line arguments and their purpose, run this script
 with the ``--help`` flag set.
@@ -13,13 +12,11 @@ import asyncio
 import logging
 import os
 
-import auraxium
+from ._db import create_pool
+from ._dispatcher import EventDispatcher
+from .handlers import BaseOwnershipController
 
-from ._blip_handler import DatabaseHandler
-from ._map import MapHandler
-from ._server import BackendServer
-
-log = logging.getLogger('backend')
+log = logging.getLogger('controller')
 
 # Default database configuration
 DEFAULT_DB_HOST = '127.0.0.1'
@@ -35,44 +32,63 @@ fh_.setFormatter(fmt)
 sh_.setFormatter(fmt)
 
 
-async def main(service_id: str, db_host: str, db_port: int, db_user: str,
-               db_pass: str, db_name: str) -> None:
-    """Asynchronous component of the main listener script.
+async def main(
+    # Census API key
+    service_id: str,
+    # DB connection parameters
+    db_host: str,  db_port: int, db_user: str, db_pass: str, db_name: str,
+    # Event handler enabled status
+    base_ownership: bool = True,
 
-    This coroutine acts much like the ``if __name__ == '__main___':``
+) -> None:
+    """Asynchronous component of the backend server script.
+
+    This coroutine acts much like the ``if __name__ == '__main__':``
     clause below, but supports asynchronous methods.
 
-    Any keyword arguments are forwarded to the :class:`Server` class's
-    initialiser.
+    Args:
+        service_id: The census API service ID to use.
+        db_host: Host address of the database server.
+        db_port: Port of the database server.
+        db_user: Login user for the database server.
+        db_pass: Login password for the database server.
+        db_name: Name of the database to access.
 
     """
-    log.info('Setting up Auraxium API client...')
-    arx_client = auraxium.Client(service_id=service_id)
-    log.info('Starting database handler...')
-    db_handler = DatabaseHandler(db_host, db_port, db_user, db_pass, db_name)
-    log.info('Initialising backend server...')
-    server = BackendServer(arx_client, db_handler, {})
-    log.info('Retrieving static tables...')
-    await server.async_init()
-    servers = [id_ for id_, *_ in await db_handler.get_servers()]
-    continents = [id_ for id_, _ in await db_handler.get_continents()]
-    log.info('Spawning map handlers (monitoring %d servers)', len(servers))
-    server.map_handlers = {
-        i: MapHandler(i, continents, service_id=arx_client.service_id)
-        for i in servers}
+    # Create database connection
+    log.info('Connecting to database \'%s\' at %s as user \'%s\'...',
+             db_name, db_host, db_user)
+    pool = create_pool(db_host, db_port, db_user,  db_pass, db_name)
+    log.info('Database connection successful')
+    # Set up dispatcher
+    log.info('Preparing event dispatcher...')
+    dispatcher = EventDispatcher(pool)
+
+    # Register event handlers
+    if base_ownership:
+        dispatcher.add_handler(BaseOwnershipController(pool, service_id))
+
+    # This try block catches any interrupts and ensures all of the components
+    # are exited gracefully before the error gets thrown at the user's screen.
+    try:
+        await dispatcher.run()
+    except BaseException:  # pylint: disable=broad-except
+        log.exception('An exception has occurred; closing connections...')
+    finally:
+        log.info('Closing database connection...')
+        await pool.close()
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     asyncio.set_event_loop_policy(
         asyncio.WindowsSelectorEventLoopPolicy())
-
     # Get default values from environment
-    def_service_id = os.getenv('SERVICE_ID', 's:example')
-    def_db_host = os.getenv('DB_HOST', DEFAULT_DB_HOST)
-    def_db_port = int(os.getenv('DB_PORT', str(DEFAULT_DB_PORT)))
-    def_db_name = os.getenv('DB_NAME', DEFAULT_DB_NAME)
-    def_db_user = os.getenv('DB_USER', DEFAULT_DB_USER)
-    def_db_pass = os.getenv('DB_PASS')
+    def_service_id = os.getenv('PS2MAP_SERVICE_ID', 's:example')
+    def_db_host = os.getenv('PS2MAP_DB_HOST', DEFAULT_DB_HOST)
+    def_db_port = int(os.getenv('PS2MAP_DB_PORT', str(DEFAULT_DB_PORT)))
+    def_db_name = os.getenv('PS2MAP_DB_NAME', DEFAULT_DB_NAME)
+    def_db_user = os.getenv('PS2MAP_DB_USER', DEFAULT_DB_USER)
+    def_db_pass = os.getenv('PS2MAP_DB_PASS')
     # Define command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -106,17 +122,9 @@ if __name__ == '__main__':
         log.setLevel(log_level)
         log.addHandler(fh_)
         log.addHandler(sh_)
-        # Add another logger for auraxium
-        arx_log = logging.getLogger('auraxium')
-        # The following will exclude auraxium's DEBUG spam from this logger
-        arx_log.setLevel(max(log_level, logging.INFO))
-        arx_log.addHandler(fh_)
-        arx_log.addHandler(sh_)
     # Run utility
-    loop = asyncio.new_event_loop()
-    loop.create_task(main(**kwargs))
     try:
-        loop.run_forever()
+        asyncio.run(main(**kwargs))
     except InterruptedError:
         log.info('The application has been shut down by an external signal')
     except KeyboardInterrupt:
@@ -124,7 +132,3 @@ if __name__ == '__main__':
     except BaseException as err:
         log.exception('An unhandled exception occurred:')
         raise err from err
-    finally:
-        loop.stop()
-        for task in asyncio.all_tasks(loop):
-            task.cancel()
