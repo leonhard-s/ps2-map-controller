@@ -3,7 +3,7 @@
 import os
 
 __all__ = [
-    'SQL_GET_TRACKED_CONTINENTS',
+    'SQL_GET_CONTINENTS',
     'SQL_GET_TRACKED_SERVERS',
 ]
 
@@ -18,5 +18,5 @@ def _get_sql(filename: str) -> str:
         return sql_file.read()
 
 
-SQL_GET_TRACKED_CONTINENTS = _get_sql('get_TrackedContinents.sql')
+SQL_GET_CONTINENTS = _get_sql('get_Continents.sql')
 SQL_GET_TRACKED_SERVERS = _get_sql('get_TrackedServers.sql')
